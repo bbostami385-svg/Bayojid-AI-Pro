@@ -27,6 +27,7 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isFirstMessage, setIsFirstMessage] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Queries
@@ -40,11 +41,13 @@ export default function Chat() {
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
   const deleteConversationMutation =
     trpc.chat.deleteConversation.useMutation();
+  const generateTitleMutation = trpc.chat.generateTitle.useMutation();
 
   // Load messages when conversation changes
   useEffect(() => {
     if (messagesList) {
       setMessages(messagesList);
+      setIsFirstMessage(messagesList.length === 0);
     }
   }, [messagesList]);
 
@@ -76,6 +79,16 @@ export default function Chat() {
         ...prev,
         { role: "assistant", content: result.assistantMessage },
       ]);
+
+      // Generate title for first message
+      if (isFirstMessage && conversationId) {
+        try {
+          await generateTitleMutation.mutateAsync({ conversationId });
+          setIsFirstMessage(false);
+        } catch (error) {
+          console.error("Failed to generate title:", error);
+        }
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
       // Remove optimistic update on error
@@ -165,7 +178,7 @@ export default function Chat() {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="আপনার বার্তা লিখুন..."
+            placeholder="আপনার বার্তা লিখুন... / Type your message..."
             disabled={isLoading}
             className="flex-1 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
           />

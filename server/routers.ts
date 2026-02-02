@@ -13,6 +13,13 @@ import {
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 
+// Helper function to detect language
+function detectLanguage(text: string): "bn" | "en" {
+  const bengaliRegex = /[\u0980-\u09FF]/g;
+  const bengaliChars = (text.match(bengaliRegex) || []).length;
+  return bengaliChars > text.length * 0.3 ? "bn" : "en";
+}
+
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
@@ -39,7 +46,7 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const result = await createConversation(
           ctx.user.id,
-          input.title || "নতুন কথোপকথন"
+          input.title || "New Conversation / নতুন কথোপকথন"
         );
         return result;
       }),
@@ -84,7 +91,7 @@ export const appRouter = router({
             {
               role: "system",
               content:
-                "আপনি একজন সহায়ক AI অ্যাসিস্ট্যান্ট। বাংলায় উত্তর দিন এবং সাহায্যকর হন।",
+                "You are a helpful AI assistant. You can respond in both Bengali and English. If the user writes in Bengali, respond in Bengali. If the user writes in English, respond in English. Be helpful and provide clear answers.",
             },
             ...llmMessages,
           ],
@@ -95,7 +102,7 @@ export const appRouter = router({
           if (typeof content === 'string') {
             return content;
           }
-          return "মাফি করলাম, প্রপ্তিরায় কোনো সমস্যা হয়েছে।";
+          return "Sorry, there was an issue processing your request. / মাফি করলাম, আপনার অনুরোধ প্রক্রিয়া করতে সমস্যা হয়েছে।";
         })();
 
         // Store assistant response
@@ -130,6 +137,34 @@ export const appRouter = router({
       .input(z.object({ conversationId: z.number() }))
       .mutation(async ({ input }) => {
         return deleteConversation(input.conversationId);
+      }),
+
+    // Search conversations
+    searchConversations: protectedProcedure
+      .input(z.object({ query: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const conversations = await getUserConversations(ctx.user.id);
+        return conversations.filter((conv) =>
+          conv.title.toLowerCase().includes(input.query.toLowerCase())
+        );
+      }),
+
+    // Generate conversation title from first message
+    generateTitle: protectedProcedure
+      .input(z.object({ conversationId: z.number() }))
+      .mutation(async ({ input }) => {
+        const messages = await getConversationMessages(input.conversationId);
+        const firstMessage = messages.find((m) => m.role === "user");
+        
+        if (!firstMessage) return { success: false };
+
+        // Generate title from first message (first 50 chars)
+        const title = firstMessage.content.substring(0, 50).trim();
+        if (title.length > 0) {
+          await updateConversationTitle(input.conversationId, title);
+          return { success: true, title };
+        }
+        return { success: false };
       }),
   }),
 });

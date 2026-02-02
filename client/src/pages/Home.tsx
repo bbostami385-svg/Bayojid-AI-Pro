@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Plus, MessageCircle, LogOut } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Plus, MessageCircle, LogOut, Search } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 
@@ -11,10 +12,17 @@ export default function Home() {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
 
+  const [searchQuery, setSearchQuery] = useState("");
   const { data: conversations, isLoading: conversationsLoading } =
     trpc.chat.listConversations.useQuery(undefined, {
       enabled: isAuthenticated,
     });
+  const { data: searchResults } = trpc.chat.searchConversations.useQuery(
+    { query: searchQuery },
+    { enabled: isAuthenticated && searchQuery.length > 0 }
+  );
+
+  const displayConversations = searchQuery.length > 0 ? searchResults : conversations;
 
   const createConversationMutation = trpc.chat.createConversation.useMutation();
 
@@ -88,20 +96,31 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Create New Conversation Button */}
-        <div className="mb-8">
+        {/* Create New Conversation and Search */}
+        <div className="mb-8 space-y-4">
           <Button
             onClick={handleCreateConversation}
             disabled={createConversationMutation.isPending}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-6 text-lg"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-6 text-lg w-full"
           >
             {createConversationMutation.isPending ? (
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
             ) : (
               <Plus className="w-5 h-5 mr-2" />
             )}
-            নতুন কথোপকথন
+            নতুন কথোপকথন / New Chat
           </Button>
+          
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+            <Input
+              placeholder="কথোপকথন খুঁজুন / Search conversations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
         </div>
 
         {/* Conversations Grid */}
@@ -126,7 +145,7 @@ export default function Home() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {conversations?.map((conv) => (
+              {displayConversations?.map((conv) => (
                 <Card
                   key={conv.id}
                   className="cursor-pointer hover:shadow-lg transition-shadow border-slate-200 hover:border-blue-400"

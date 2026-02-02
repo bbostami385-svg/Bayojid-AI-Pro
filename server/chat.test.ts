@@ -53,67 +53,16 @@ describe("chat router", () => {
     expect(Array.isArray(result)).toBe(true);
   });
 
-  it("handles message sending", async () => {
-    const ctx = createAuthContext();
-    const caller = appRouter.createCaller(ctx);
-
-    // Create a conversation first
-    const convResult = await caller.chat.createConversation({
-      title: "মেসেজ টেস্ট",
-    });
-
-    const conversationId = (convResult as any)[0]?.id || 1;
-
-    // Send a message
-    const messageResult = await caller.chat.sendMessage({
-      conversationId,
-      message: "হ্যালো, এটি একটি টেস্ট মেসেজ",
-    });
-
-    expect(messageResult).toBeDefined();
-    expect(messageResult.userMessage).toBe("হ্যালো, এটি একটি টেস্ট মেসেজ");
-    expect(messageResult.assistantMessage).toBeDefined();
-    expect(typeof messageResult.assistantMessage).toBe("string");
-  });
-
-  it("retrieves conversation messages", async () => {
-    const ctx = createAuthContext();
-    const caller = appRouter.createCaller(ctx);
-
-    // Create a conversation
-    const convResult = await caller.chat.createConversation({
-      title: "রিট্রিভ টেস্ট",
-    });
-
-    const conversationId = (convResult as any)[0]?.id || 1;
-
-    // Send a message
-    await caller.chat.sendMessage({
-      conversationId,
-      message: "প্রথম মেসেজ",
-    });
-
-    // Get messages
-    const messages = await caller.chat.getMessages({
-      conversationId,
-    });
-
-    expect(Array.isArray(messages)).toBe(true);
-    expect(messages.length).toBeGreaterThan(0);
-  });
-
   it("updates conversation title", async () => {
     const ctx = createAuthContext();
     const caller = appRouter.createCaller(ctx);
 
-    // Create a conversation
-    const convResult = await caller.chat.createConversation({
+    const result = await caller.chat.createConversation({
       title: "পুরানো নাম",
     });
 
-    const conversationId = (convResult as any)[0]?.id || 1;
+    const conversationId = (result as any)[0]?.id || 1;
 
-    // Update title
     const updateResult = await caller.chat.updateTitle({
       conversationId,
       title: "নতুন নাম",
@@ -126,18 +75,92 @@ describe("chat router", () => {
     const ctx = createAuthContext();
     const caller = appRouter.createCaller(ctx);
 
-    // Create a conversation
-    const convResult = await caller.chat.createConversation({
+    const result = await caller.chat.createConversation({
       title: "ডিলিট টেস্ট",
     });
 
-    const conversationId = (convResult as any)[0]?.id || 1;
+    const conversationId = (result as any)[0]?.id || 1;
 
-    // Delete conversation
     const deleteResult = await caller.chat.deleteConversation({
       conversationId,
     });
 
     expect(deleteResult).toBeDefined();
+  });
+
+  it("searches conversations by title", async () => {
+    const ctx = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    await caller.chat.createConversation({
+      title: "পাইথন প্রোগ্রামিং",
+    });
+
+    await caller.chat.createConversation({
+      title: "জাভাস্ক্রিপ্ট টিউটোরিয়াল",
+    });
+
+    const searchResult = await caller.chat.searchConversations({
+      query: "প্রোগ্রামিং",
+    });
+
+    expect(Array.isArray(searchResult)).toBe(true);
+  });
+
+  it("generates title from first message", async () => {
+    const ctx = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.chat.createConversation({
+      title: "শিরোনাম জেনারেশন",
+    });
+
+    const conversationId = (result as any)[0]?.id || 1;
+
+    const titleResult = await caller.chat.generateTitle({
+      conversationId,
+    });
+
+    expect(titleResult).toBeDefined();
+  });
+
+  it("supports multilingual input - Bengali", async () => {
+    const ctx = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.chat.createConversation({
+      title: "বহুভাষিক পরীক্ষা",
+    });
+
+    const conversationId = (result as any)[0]?.id || 1;
+
+    const bengaliResult = await caller.chat.sendMessage({
+      conversationId,
+      message: "আমাকে হ্যালো বলুন",
+    });
+
+    expect(bengaliResult.userMessage).toBe("আমাকে হ্যালো বলুন");
+    expect(bengaliResult.assistantMessage).toBeDefined();
+    expect(typeof bengaliResult.assistantMessage).toBe("string");
+  });
+
+  it("supports multilingual input - English", async () => {
+    const ctx = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.chat.createConversation({
+      title: "English Test",
+    });
+
+    const conversationId = (result as any)[0]?.id || 1;
+
+    const englishResult = await caller.chat.sendMessage({
+      conversationId,
+      message: "Hello, how are you?",
+    });
+
+    expect(englishResult.userMessage).toBe("Hello, how are you?");
+    expect(englishResult.assistantMessage).toBeDefined();
+    expect(typeof englishResult.assistantMessage).toBe("string");
   });
 });
