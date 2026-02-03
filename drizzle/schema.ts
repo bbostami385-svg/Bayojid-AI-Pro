@@ -53,3 +53,36 @@ export const messages = mysqlTable("messages", {
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
+
+/**
+ * Conversation Shares table - stores shared links for conversations
+ */
+export const conversationShares = mysqlTable("conversationShares", {
+  id: int("id").autoincrement().primaryKey(),
+  conversationId: int("conversationId").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  shareToken: varchar("shareToken", { length: 64 }).notNull().unique(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
+});
+
+export type ConversationShare = typeof conversationShares.$inferSelect;
+export type InsertConversationShare = typeof conversationShares.$inferInsert;
+
+
+/**
+ * Premium Subscriptions table - stores user subscription information
+ */
+export const premiumSubscriptions = mysqlTable("premiumSubscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  plan: mysqlEnum("plan", ["free", "pro", "premium"]).default("free").notNull(),
+  messageLimit: int("messageLimit").default(50).notNull(),
+  messagesUsed: int("messagesUsed").default(0).notNull(),
+  customPromptAllowed: int("customPromptAllowed").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PremiumSubscription = typeof premiumSubscriptions.$inferSelect;
+export type InsertPremiumSubscription = typeof premiumSubscriptions.$inferInsert;

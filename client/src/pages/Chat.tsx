@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -49,21 +49,18 @@ export default function Chat() {
 
   // Mutations
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
-  const deleteConversationMutation =
-    trpc.chat.deleteConversation.useMutation();
+  const deleteConversationMutation = trpc.chat.deleteConversation.useMutation();
   const updateTitleMutation = trpc.chat.updateTitle.useMutation();
 
-  // Update messages when fetched
-  useState(() => {
+  useEffect(() => {
     if (messagesList) {
       setMessages(messagesList);
     }
-  });
+  }, [messagesList]);
 
-  // Auto-scroll to bottom
-  useState(() => {
+  useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  });
+  }, [messages, isLoading]);
 
   const handleStartRecording = async () => {
     try {
@@ -78,58 +75,38 @@ export default function Chat() {
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, {
-          type: "audio/wav",
+          type: "audio/webm",
         });
-        await handleVoiceInput(audioBlob);
-        stream.getTracks().forEach((track) => track.stop());
+        const formData = new FormData();
+        formData.append("audio", audioBlob);
+
+        try {
+          const response = await fetch("/api/transcribe", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await response.json();
+          setInput(data.text || "");
+        } catch (error) {
+          console.error("Transcription failed:", error);
+        }
       };
 
       mediaRecorder.start();
       setIsRecording(true);
     } catch (error) {
       console.error("Failed to start recording:", error);
-      alert("মাইক্রোফোন অ্যাক্সেস প্রয়োজন / Microphone access required");
     }
   };
 
   const handleStopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      mediaRecorderRef.current.stream
+        .getTracks()
+        .forEach((track) => track.stop());
     }
-  };
-
-  const handleVoiceInput = async (audioBlob: Blob) => {
-    try {
-      const formData = new FormData();
-      formData.append("audio", audioBlob, "recording.wav");
-
-      const response = await fetch("/api/transcribe", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setInput(data.text || "");
-      }
-    } catch (error) {
-      console.error("Failed to process voice input:", error);
-    }
-  };
-
-  const handleExportAsText = () => {
-    if (!conversationId || messages.length === 0) return;
-    const textContent = messages
-      .map((msg) => `${msg.role === "user" ? "আপনি" : "AI"}: ${msg.content}`)
-      .join("\n\n");
-    const element = document.createElement("a");
-    const file = new Blob([textContent], { type: "text/plain" });
-    element.href = URL.createObjectURL(file);
-    element.download = `conversation-${conversationId}.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -177,6 +154,25 @@ export default function Chat() {
     }
   };
 
+  const handleExportAsText = () => {
+    const textContent = messages
+      .map((msg) =>
+        `${msg.role === "user" ? "আপনি" : "AI"}: ${msg.content}`
+      )
+      .join("\n\n");
+
+    const element = document.createElement("a");
+    element.setAttribute(
+      "href",
+      "data:text/plain;charset=utf-8," + encodeURIComponent(textContent)
+    );
+    element.setAttribute("download", "conversation.txt");
+    element.style.display = "none";
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
   if (!conversationId) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -216,8 +212,8 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Messages Area */}
-      <ScrollArea className="flex-1 p-6">
+      {/* Messages */}
+      <ScrollArea className="flex-1 px-6 py-8">
         <div className="space-y-4 max-w-3xl mx-auto">
           {messagesLoading ? (
             <div className="flex items-center justify-center h-32">
@@ -228,26 +224,39 @@ export default function Chat() {
               <p className="text-slate-500 text-lg">কথোপকথন শুরু করুন</p>
             </div>
           ) : (
-            messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
+            <>
+              {messages.map((msg, idx) => (
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
-                    msg.role === "user"
-                      ? "bg-blue-600 text-white rounded-br-none"
-                      : "bg-white text-slate-800 border border-slate-200 rounded-bl-none shadow-sm"
-                  }`}
+                  key={idx}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  {msg.role === "assistant" ? (
-                    <Streamdown>{msg.content}</Streamdown>
-                  ) : (
-                    <p className="text-sm">{msg.content}</p>
-                  )}
+                  <div
+                    className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
+                      msg.role === "user"
+                        ? "bg-blue-600 text-white rounded-br-none"
+                        : "bg-white text-slate-800 border border-slate-200 rounded-bl-none shadow-sm"
+                    }`}
+                  >
+                    {msg.role === "assistant" ? (
+                      <Streamdown>{msg.content}</Streamdown>
+                    ) : (
+                      <p className="text-sm">{msg.content}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-white text-slate-800 border border-slate-200 rounded-lg rounded-bl-none shadow-sm px-4 py-3">
+                    <div className="flex gap-2 items-center">
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           <div ref={scrollRef} />
         </div>
@@ -259,48 +268,52 @@ export default function Chat() {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="আপনার বার্তা লিখুন... / Type your message..."
+            placeholder="বার্তা লিখুন... / Type a message..."
             disabled={isLoading}
             className="flex-1 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
           />
           <Button
             type="button"
-            onClick={isRecording ? handleStopRecording : handleStartRecording}
-            className={`${
+            onClick={
+              isRecording ? handleStopRecording : handleStartRecording
+            }
+            variant="outline"
+            size="icon"
+            className={
               isRecording
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-green-600 hover:bg-green-700"
-            } text-white px-6`}
+                ? "bg-red-50 text-red-600 border-red-300"
+                : "text-slate-600"
+            }
           >
             {isRecording ? (
-              <MicOff className="w-5 h-5" />
+              <MicOff className="w-4 h-4" />
             ) : (
-              <Mic className="w-5 h-5" />
+              <Mic className="w-4 h-4" />
             )}
           </Button>
           <Button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Send className="w-5 h-5" />
+              <Send className="w-4 h-4" />
             )}
           </Button>
         </form>
       </div>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogTitle>কথোপকথন মুছুন?</AlertDialogTitle>
           <AlertDialogDescription>
-            এই কথোপকথনটি স্থায়ীভাবে মুছে ফেলা হবে।
+            এই কথোপকথনটি চিরতরে মুছে ফেলা হবে এবং পুনরুদ্ধার করা যাবে না।
           </AlertDialogDescription>
           <div className="flex gap-3 justify-end">
-            <AlertDialogCancel>বাতিল</AlertDialogCancel>
+            <AlertDialogCancel>বাতিল করুন</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConversation}
               className="bg-red-600 hover:bg-red-700"

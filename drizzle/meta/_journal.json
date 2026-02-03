@@ -22,6 +22,20 @@
       "when": 1770018402229,
       "tag": "0002_rich_firedrake",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1770117804198,
+      "tag": "0003_brief_captain_stacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1770117883261,
+      "tag": "0004_chilly_toad",
+      "breakpoints": true
     }
   ]
 }

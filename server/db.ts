@@ -1,6 +1,7 @@
 import { asc, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, conversations, messages } from "../drizzle/schema";
+import { InsertUser, users, conversations, messages, conversationShares, premiumSubscriptions } from "../drizzle/schema";
+import { sql } from "drizzle-orm";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -162,4 +163,115 @@ export async function deleteConversation(conversationId: number) {
   if (!db) throw new Error("Database not available");
 
   return db.delete(conversations).where(eq(conversations.id, conversationId));
+}
+
+
+/**
+ * Conversation Sharing helpers
+ */
+export async function createShareLink(conversationId: number, expiresAt?: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const shareToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  
+  return db.insert(conversationShares).values({
+    conversationId,
+    shareToken,
+    expiresAt,
+  });
+}
+
+export async function getSharedConversation(shareToken: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const share = await db
+    .select()
+    .from(conversationShares)
+    .where(eq(conversationShares.shareToken, shareToken))
+    .limit(1);
+
+  if (share.length === 0) return null;
+
+  const shareRecord = share[0];
+  if (shareRecord.expiresAt && new Date() > shareRecord.expiresAt) {
+    return null;
+  }
+
+  return shareRecord;
+}
+
+export async function deleteShareLink(shareToken: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.delete(conversationShares).where(eq(conversationShares.shareToken, shareToken));
+}
+
+
+/**
+ * Premium Subscription helpers
+ */
+export async function getUserSubscription(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db
+    .select()
+    .from(premiumSubscriptions)
+    .where(eq(premiumSubscriptions.userId, userId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function createOrUpdateSubscription(
+  userId: number,
+  plan: "free" | "pro" | "premium",
+  expiresAt?: Date
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await getUserSubscription(userId);
+  
+  if (existing) {
+    return db
+      .update(premiumSubscriptions)
+      .set({ plan, expiresAt, updatedAt: new Date() })
+      .where(eq(premiumSubscriptions.userId, userId));
+  } else {
+    const messageLimits: Record<string, number> = {
+      free: 50,
+      pro: 500,
+      premium: 10000,
+    };
+
+    return db.insert(premiumSubscriptions).values({
+      userId,
+      plan,
+      messageLimit: messageLimits[plan],
+      expiresAt,
+    });
+  }
+}
+
+export async function incrementMessageUsage(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db
+    .update(premiumSubscriptions)
+    .set({ messagesUsed: sql`${premiumSubscriptions.messagesUsed} + 1` })
+    .where(eq(premiumSubscriptions.userId, userId));
+}
+
+export async function resetMonthlyUsage() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db
+    .update(premiumSubscriptions)
+    .set({ messagesUsed: 0 });
 }

@@ -10,6 +10,11 @@ import {
   addMessage,
   deleteConversation as deleteConversationDB,
   updateConversationTitle,
+  createShareLink,
+  getSharedConversation,
+  deleteShareLink,
+  getUserSubscription,
+  createOrUpdateSubscription,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 
@@ -34,26 +39,22 @@ export const appRouter = router({
   }),
 
   chat: router({
-    // Create a new conversation
     createConversation: protectedProcedure
       .input(z.object({ title: z.string() }))
       .mutation(async ({ ctx, input }) => {
         return await createConversation(ctx.user.id, input.title);
       }),
 
-    // List user's conversations
     listConversations: protectedProcedure.query(async ({ ctx }) => {
       return await getUserConversations(ctx.user.id);
     }),
 
-    // Get messages in a conversation
     getMessages: protectedProcedure
       .input(z.object({ conversationId: z.number() }))
       .query(async ({ input }) => {
         return await getConversationMessages(input.conversationId);
       }),
 
-    // Send a message and get AI response
     sendMessage: protectedProcedure
       .input(
         z.object({
@@ -63,24 +64,19 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        // Store user message
         await addMessage(input.conversationId, "user", input.message);
 
-        // Get conversation history
         const messages = await getConversationMessages(input.conversationId);
 
-        // Prepare messages for LLM
         const llmMessages = messages.map((msg) => ({
           role: msg.role as "user" | "assistant",
           content: msg.content,
         }));
 
-        // Get personality prompt
         const personalityPrompt =
           personalityPrompts[input.personality || "friendly"] ||
           personalityPrompts.friendly;
 
-        // Get AI response
         const response = await invokeLLM({
           messages: [
             {
@@ -99,7 +95,6 @@ export const appRouter = router({
           return "Sorry, there was an issue processing your request. / মাফি করলাম, আপনার অনুরোধ প্রক্রিয়া করতে সমস্যা হয়েছে।";
         })();
 
-        // Store assistant response
         if (typeof assistantMessage === "string") {
           await addMessage(
             input.conversationId,
@@ -114,7 +109,6 @@ export const appRouter = router({
         };
       }),
 
-    // Update conversation title
     updateTitle: protectedProcedure
       .input(
         z.object({
@@ -129,14 +123,12 @@ export const appRouter = router({
         );
       }),
 
-    // Delete a conversation
     deleteConversation: protectedProcedure
       .input(z.object({ conversationId: z.number() }))
       .mutation(async ({ input }) => {
         return await deleteConversationDB(input.conversationId);
       }),
 
-    // Search conversations
     searchConversations: protectedProcedure
       .input(z.object({ query: z.string() }))
       .query(async ({ ctx, input }) => {
@@ -146,7 +138,6 @@ export const appRouter = router({
         );
       }),
 
-    // Generate conversation title from first message
     generateTitle: protectedProcedure
       .input(z.object({ conversationId: z.number() }))
       .mutation(async ({ input }) => {
@@ -155,7 +146,6 @@ export const appRouter = router({
 
         if (!firstMessage) return { success: false };
 
-        // Generate title from first message (first 50 chars)
         const title = firstMessage.content.substring(0, 50).trim();
         if (title.length > 0) {
           await updateConversationTitle(input.conversationId, title);
@@ -164,7 +154,6 @@ export const appRouter = router({
         return { success: false };
       }),
 
-    // Export conversation as text
     exportAsText: protectedProcedure
       .input(z.object({ conversationId: z.number() }))
       .query(async ({ input }) => {
@@ -177,7 +166,6 @@ export const appRouter = router({
         return textContent;
       }),
 
-    // Export conversation as JSON
     exportAsJSON: protectedProcedure
       .input(z.object({ conversationId: z.number() }))
       .query(async ({ input }) => {
@@ -185,13 +173,89 @@ export const appRouter = router({
         return JSON.stringify(messages, null, 2);
       }),
 
-    // Get personality options
+    createShareLink: protectedProcedure
+      .input(z.object({ conversationId: z.number() }))
+      .mutation(async ({ input }) => {
+        await createShareLink(input.conversationId);
+        return { success: true };
+      }),
+
+    getSharedConversation: publicProcedure
+      .input(z.object({ shareToken: z.string() }))
+      .query(async ({ input }) => {
+        const share = await getSharedConversation(input.shareToken);
+        if (!share) return null;
+        
+        const messages = await getConversationMessages(share.conversationId);
+        return { messages };
+      }),
+
+    deleteShareLink: protectedProcedure
+      .input(z.object({ shareToken: z.string() }))
+      .mutation(async ({ input }) => {
+        await deleteShareLink(input.shareToken);
+        return { success: true };
+      }),
+
     getPersonalities: publicProcedure.query(() => {
       return [
         { id: "friendly", name: "বন্ধুত্বপূর্ণ / Friendly", description: "উষ্ণ এবং কথোপকথনমূলক" },
         { id: "professional", name: "পেশাদার / Professional", description: "আনুষ্ঠানিক এবং সংক্ষিপ্ত" },
         { id: "teacher", name: "শিক্ষক / Teacher", description: "শিক্ষামূলক এবং ব্যাখ্যামূলক" },
         { id: "creative", name: "সৃজনশীল / Creative", description: "কল্পনাপ্রবণ এবং উদ্ভাবনী" },
+      ];
+    }),
+  }),
+
+  premium: router({
+    getSubscription: protectedProcedure.query(async ({ ctx }) => {
+      return await getUserSubscription(ctx.user.id);
+    }),
+
+    upgradeSubscription: protectedProcedure
+      .input(z.object({ plan: z.enum(["free", "pro", "premium"]) }))
+      .mutation(async ({ ctx, input }) => {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30);
+
+        await createOrUpdateSubscription(ctx.user.id, input.plan, expiresAt);
+        return { success: true, plan: input.plan };
+      }),
+
+    canSendMessage: protectedProcedure.query(async ({ ctx }) => {
+      const subscription = await getUserSubscription(ctx.user.id);
+
+      if (!subscription) {
+        return { allowed: true, remaining: 50 };
+      }
+
+      const remaining = subscription.messageLimit - subscription.messagesUsed;
+      return { allowed: remaining > 0, remaining: Math.max(0, remaining) };
+    }),
+
+    getPricingPlans: publicProcedure.query(() => {
+      return [
+        {
+          id: "free",
+          name: "বিনামূল্যে / Free",
+          price: "0 টাকা",
+          messages: "50 বার্তা/মাস",
+          features: ["মৌলিক চ্যাট", "একটি AI ব্যক্তিত্ব"],
+        },
+        {
+          id: "pro",
+          name: "প্রো / Pro",
+          price: "৯৯ টাকা/মাস",
+          messages: "500 বার্তা/মাস",
+          features: ["সীমাহীন চ্যাট", "সমস্ত AI ব্যক্তিত্ব", "কথোপকথন শেয়ারিং"],
+        },
+        {
+          id: "premium",
+          name: "প্রিমিয়াম / Premium",
+          price: "২৯৯ টাকা/মাস",
+          messages: "10,000 বার্তা/মাস",
+          features: ["সীমাহীন সবকিছু", "কাস্টম AI প্রম্পট", "অগ্রাধিকার সহায়তা"],
+        },
       ];
     }),
   }),
