@@ -7,6 +7,15 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import multer from "multer";
+import { transcribeAudio } from "./voiceTranscription";
+import type { Request, Response } from "express";
+
+interface TranscriptionResult {
+  text?: string;
+  language?: string;
+  segments?: any[];
+}
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -35,6 +44,37 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  
+  // Voice transcription endpoint
+  const upload = multer({ storage: multer.memoryStorage() });
+  app.post("/api/transcribe", upload.single("audio"), async (req: any, res: any) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No audio file provided" });
+      }
+
+      // Upload to S3 first
+      const { storagePut } = await import("../storage");
+      const { url } = await storagePut(
+        `audio/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.wav`,
+        req.file.buffer,
+        "audio/wav"
+      );
+
+      // Transcribe the audio
+      const result: any = await transcribeAudio({
+        audioUrl: url,
+        language: "bn",
+      });
+
+      const transcribedText = (result && typeof result === 'object' && 'text' in result) ? result.text : "";
+      res.json({ text: transcribedText });
+    } catch (error) {
+      console.error("Transcription error:", error);
+      res.status(500).json({ error: "Failed to transcribe audio" });
+    }
+  });
+  
   // tRPC API
   app.use(
     "/api/trpc",

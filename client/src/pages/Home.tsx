@@ -111,6 +111,23 @@ export default function Home() {
             নতুন কথোপকথন / New Chat
           </Button>
           
+          {/* Personality Selector */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {personalities?.map((p: any) => (
+              <Button
+                key={p.id}
+                onClick={() => setSelectedPersonality(p.id)}
+                className={`text-sm py-2 ${
+                  selectedPersonality === p.id
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                {p.name}
+              </Button>
+            ))}
+          </div>
+          
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
@@ -177,3 +194,7 @@ export default function Home() {
     </div>
   );
 }
+
+  // Personality selection state
+  const [selectedPersonality, setSelectedPersonality] = useState("friendly");
+  const { data: personalities } = trpc.chat.getPersonalities.useQuery();

@@ -1,30 +1,29 @@
+import { z } from "zod";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { systemRouter } from "./_core/systemRouter";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
-import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
-import { z } from "zod";
 import {
-  createConversation,
   getUserConversations,
+  createConversation,
   getConversationMessages,
   addMessage,
+  deleteConversation as deleteConversationDB,
   updateConversationTitle,
-  deleteConversation,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 
-// Helper function to detect language
-function detectLanguage(text: string): "bn" | "en" {
-  const bengaliRegex = /[\u0980-\u09FF]/g;
-  const bengaliChars = (text.match(bengaliRegex) || []).length;
-  return bengaliChars > text.length * 0.3 ? "bn" : "en";
-}
+const personalityPrompts: Record<string, string> = {
+  friendly: "You are a friendly and warm AI assistant. Be conversational and approachable.",
+  professional: "You are a professional and formal AI assistant. Be concise and business-like.",
+  teacher: "You are an educational AI assistant. Explain concepts clearly and provide examples.",
+  creative: "You are a creative and imaginative AI assistant. Think outside the box and be innovative.",
+};
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -35,27 +34,23 @@ export const appRouter = router({
   }),
 
   chat: router({
-    // Get all conversations for the current user
-    listConversations: protectedProcedure.query(async ({ ctx }) => {
-      return getUserConversations(ctx.user.id);
-    }),
-
     // Create a new conversation
     createConversation: protectedProcedure
-      .input(z.object({ title: z.string().optional() }))
+      .input(z.object({ title: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        const result = await createConversation(
-          ctx.user.id,
-          input.title || "New Conversation / নতুন কথোপকথন"
-        );
-        return result;
+        return await createConversation(ctx.user.id, input.title);
       }),
 
-    // Get messages for a specific conversation
+    // List user's conversations
+    listConversations: protectedProcedure.query(async ({ ctx }) => {
+      return await getUserConversations(ctx.user.id);
+    }),
+
+    // Get messages in a conversation
     getMessages: protectedProcedure
       .input(z.object({ conversationId: z.number() }))
       .query(async ({ input }) => {
-        return getConversationMessages(input.conversationId);
+        return await getConversationMessages(input.conversationId);
       }),
 
     // Send a message and get AI response
@@ -64,9 +59,10 @@ export const appRouter = router({
         z.object({
           conversationId: z.number(),
           message: z.string(),
+          personality: z.string().optional(),
         })
       )
-      .mutation(async ({ ctx, input }) => {
+      .mutation(async ({ input }) => {
         // Store user message
         await addMessage(input.conversationId, "user", input.message);
 
@@ -79,19 +75,17 @@ export const appRouter = router({
           content: msg.content,
         }));
 
-        // Add current user message
-        llmMessages.push({
-          role: "user" as const,
-          content: input.message,
-        });
+        // Get personality prompt
+        const personalityPrompt =
+          personalityPrompts[input.personality || "friendly"] ||
+          personalityPrompts.friendly;
 
-        // Call LLM
+        // Get AI response
         const response = await invokeLLM({
           messages: [
             {
               role: "system",
-              content:
-                "You are a helpful AI assistant. You can respond in both Bengali and English. If the user writes in Bengali, respond in Bengali. If the user writes in English, respond in English. Be helpful and provide clear answers.",
+              content: `${personalityPrompt} Respond in the same language as the user (Bengali or English).`,
             },
             ...llmMessages,
           ],
@@ -99,14 +93,14 @@ export const appRouter = router({
 
         const assistantMessage = (() => {
           const content = response.choices[0]?.message?.content;
-          if (typeof content === 'string') {
+          if (typeof content === "string") {
             return content;
           }
           return "Sorry, there was an issue processing your request. / মাফি করলাম, আপনার অনুরোধ প্রক্রিয়া করতে সমস্যা হয়েছে।";
         })();
 
         // Store assistant response
-        if (typeof assistantMessage === 'string') {
+        if (typeof assistantMessage === "string") {
           await addMessage(
             input.conversationId,
             "assistant",
@@ -129,14 +123,17 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        return updateConversationTitle(input.conversationId, input.title);
+        return await updateConversationTitle(
+          input.conversationId,
+          input.title
+        );
       }),
 
     // Delete a conversation
     deleteConversation: protectedProcedure
       .input(z.object({ conversationId: z.number() }))
       .mutation(async ({ input }) => {
-        return deleteConversation(input.conversationId);
+        return await deleteConversationDB(input.conversationId);
       }),
 
     // Search conversations
@@ -155,7 +152,7 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const messages = await getConversationMessages(input.conversationId);
         const firstMessage = messages.find((m) => m.role === "user");
-        
+
         if (!firstMessage) return { success: false };
 
         // Generate title from first message (first 50 chars)
@@ -166,6 +163,37 @@ export const appRouter = router({
         }
         return { success: false };
       }),
+
+    // Export conversation as text
+    exportAsText: protectedProcedure
+      .input(z.object({ conversationId: z.number() }))
+      .query(async ({ input }) => {
+        const messages = await getConversationMessages(input.conversationId);
+        const textContent = messages
+          .map((msg) =>
+            `${msg.role === "user" ? "আপনি" : "AI"}: ${msg.content}`
+          )
+          .join("\n\n");
+        return textContent;
+      }),
+
+    // Export conversation as JSON
+    exportAsJSON: protectedProcedure
+      .input(z.object({ conversationId: z.number() }))
+      .query(async ({ input }) => {
+        const messages = await getConversationMessages(input.conversationId);
+        return JSON.stringify(messages, null, 2);
+      }),
+
+    // Get personality options
+    getPersonalities: publicProcedure.query(() => {
+      return [
+        { id: "friendly", name: "বন্ধুত্বপূর্ণ / Friendly", description: "উষ্ণ এবং কথোপকথনমূলক" },
+        { id: "professional", name: "পেশাদার / Professional", description: "আনুষ্ঠানিক এবং সংক্ষিপ্ত" },
+        { id: "teacher", name: "শিক্ষক / Teacher", description: "শিক্ষামূলক এবং ব্যাখ্যামূলক" },
+        { id: "creative", name: "সৃজনশীল / Creative", description: "কল্পনাপ্রবণ এবং উদ্ভাবনী" },
+      ];
+    }),
   }),
 });
 

@@ -1,0 +1,1 @@
+ALTER TABLE `conversations` ADD `personality` enum('friendly','professional','teacher','creative') DEFAULT 'friendly' NOT NULL;

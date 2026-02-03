@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useState, useRef } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Trash2 } from "lucide-react";
+import { Loader2, Send, Trash2, Mic, MicOff, Download } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
@@ -20,6 +20,12 @@ export default function Chat() {
   const [, params] = useRoute("/chat/:id");
   const conversationId = params?.id ? parseInt(params.id) : null;
   const { user } = useAuth();
+  const searchParams = new URLSearchParams(window.location.search);
+  const personalityParam = searchParams.get("personality") || "friendly";
+
+  useState(() => {
+    setPersonality(personalityParam);
+  });
 
   const [messages, setMessages] = useState<
     Array<{ id?: number; role: string; content: string }>
@@ -28,6 +34,10 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
+  const [personality, setPersonality] = useState("friendly");
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Queries
@@ -41,58 +51,116 @@ export default function Chat() {
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
   const deleteConversationMutation =
     trpc.chat.deleteConversation.useMutation();
-  const generateTitleMutation = trpc.chat.generateTitle.useMutation();
+  const updateTitleMutation = trpc.chat.updateTitle.useMutation();
 
-  // Load messages when conversation changes
-  useEffect(() => {
+  // Update messages when fetched
+  useState(() => {
     if (messagesList) {
       setMessages(messagesList);
-      setIsFirstMessage(messagesList.length === 0);
     }
-  }, [messagesList]);
+  });
 
   // Auto-scroll to bottom
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+  useState(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  });
+
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/wav",
+        });
+        await handleVoiceInput(audioBlob);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Failed to start recording:", error);
+      alert("মাইক্রোফোন অ্যাক্সেস প্রয়োজন / Microphone access required");
     }
-  }, [messages]);
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleVoiceInput = async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.wav");
+
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setInput(data.text || "");
+      }
+    } catch (error) {
+      console.error("Failed to process voice input:", error);
+    }
+  };
+
+  const handleExportAsText = () => {
+    if (!conversationId || messages.length === 0) return;
+    const textContent = messages
+      .map((msg) => `${msg.role === "user" ? "আপনি" : "AI"}: ${msg.content}`)
+      .join("\n\n");
+    const element = document.createElement("a");
+    const file = new Blob([textContent], { type: "text/plain" });
+    element.href = URL.createObjectURL(file);
+    element.download = `conversation-${conversationId}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !conversationId || isLoading) return;
+    if (!input.trim() || !conversationId) return;
 
-    const userMessage = input;
-    setInput("");
     setIsLoading(true);
-
-    // Optimistic update
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
-
     try {
       const result = await sendMessageMutation.mutateAsync({
         conversationId,
-        message: userMessage,
+        message: input,
+        personality,
       });
 
       setMessages((prev) => [
         ...prev,
+        { role: "user", content: result.userMessage },
         { role: "assistant", content: result.assistantMessage },
       ]);
 
-      // Generate title for first message
-      if (isFirstMessage && conversationId) {
-        try {
-          await generateTitleMutation.mutateAsync({ conversationId });
-          setIsFirstMessage(false);
-        } catch (error) {
-          console.error("Failed to generate title:", error);
-        }
+      if (isFirstMessage) {
+        await updateTitleMutation.mutateAsync({
+          conversationId,
+          title: input.substring(0, 50),
+        });
+        setIsFirstMessage(false);
       }
+
+      setInput("");
     } catch (error) {
       console.error("Failed to send message:", error);
-      // Remove optimistic update on error
-      setMessages((prev) => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
     }
@@ -124,15 +192,28 @@ export default function Chat() {
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
       <div className="border-b border-slate-200 bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-semibold text-slate-800">চ্যাট</h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowDeleteDialog(true)}
-          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div>
+          <h1 className="text-xl font-semibold text-slate-800">চ্যাট</h1>
+          <p className="text-xs text-slate-500 mt-1">AI ব্যক্তিত্ব: {personality === "friendly" ? "বন্ধুত্বপূর্ণ" : personality === "professional" ? "পেশাদার" : personality === "teacher" ? "শিক্ষক" : "সৃজনশীল"}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleExportAsText}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          >
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDeleteDialog(true)}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Messages Area */}
@@ -173,7 +254,7 @@ export default function Chat() {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="border-t border-slate-200 bg-white p-6">
+      <div className="border-t border-slate-200 bg-white shadow-lg px-6 py-4">
         <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex gap-3">
           <Input
             value={input}
@@ -183,33 +264,48 @@ export default function Chat() {
             className="flex-1 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
           />
           <Button
+            type="button"
+            onClick={isRecording ? handleStopRecording : handleStartRecording}
+            className={`${
+              isRecording
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-green-600 hover:bg-green-700"
+            } text-white px-6`}
+          >
+            {isRecording ? (
+              <MicOff className="w-5 h-5" />
+            ) : (
+              <Mic className="w-5 h-5" />
+            )}
+          </Button>
+          <Button
             type="submit"
             disabled={isLoading || !input.trim()}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
           >
             {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              <Send className="w-4 h-4" />
+              <Send className="w-5 h-5" />
             )}
           </Button>
         </form>
       </div>
 
-      {/* Delete Dialog */}
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
-          <AlertDialogTitle>কথোপকথন মুছে ফেলুন?</AlertDialogTitle>
+          <AlertDialogTitle>কথোপকথন মুছুন?</AlertDialogTitle>
           <AlertDialogDescription>
-            এই কথোপকথনটি চিরতরে মুছে ফেলা হবে এবং পুনরুদ্ধার করা যাবে না।
+            এই কথোপকথনটি স্থায়ীভাবে মুছে ফেলা হবে।
           </AlertDialogDescription>
           <div className="flex gap-3 justify-end">
-            <AlertDialogCancel>বাতিল করুন</AlertDialogCancel>
+            <AlertDialogCancel>বাতিল</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConversation}
               className="bg-red-600 hover:bg-red-700"
             >
-              মুছে ফেলুন
+              মুছুন
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
