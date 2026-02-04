@@ -259,6 +259,31 @@ export const appRouter = router({
       ];
     }),
   }),
+
+  reactions: router({
+    addReaction: protectedProcedure
+      .input(z.object({ messageId: z.number(), emoji: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { addReaction } = await import("./db");
+        await addReaction(input.messageId, ctx.user.id, input.emoji);
+        return { success: true };
+      }),
+
+    getReactions: publicProcedure
+      .input(z.object({ messageId: z.number() }))
+      .query(async ({ input }) => {
+        const { getMessageReactions } = await import("./db");
+        return await getMessageReactions(input.messageId);
+      }),
+
+    removeReaction: protectedProcedure
+      .input(z.object({ messageId: z.number(), emoji: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { removeReaction } = await import("./db");
+        await removeReaction(input.messageId, ctx.user.id, input.emoji);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

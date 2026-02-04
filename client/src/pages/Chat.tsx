@@ -4,8 +4,9 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Trash2, Mic, MicOff, Download } from "lucide-react";
+import { Loader2, Send, Trash2, Mic, MicOff, Download, Bell } from "lucide-react";
 import { Streamdown } from "streamdown";
+import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   AlertDialog,
@@ -127,6 +128,11 @@ export default function Chat() {
         { role: "assistant", content: result.assistantMessage },
       ]);
 
+      // নোটিফিকেশন দেখান
+      toast.success("নতুন উত্তর পেয়েছেন / New response received", {
+        icon: <Bell className="w-4 h-4" />,
+      });
+
       if (isFirstMessage) {
         await updateTitleMutation.mutateAsync({
           conversationId,
@@ -226,22 +232,29 @@ export default function Chat() {
           ) : (
             <>
               {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
+                <div key={idx} className="group">
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
-                      msg.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-none"
-                        : "bg-white text-slate-800 border border-slate-200 rounded-bl-none shadow-sm"
-                    }`}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
-                    {msg.role === "assistant" ? (
-                      <Streamdown>{msg.content}</Streamdown>
-                    ) : (
-                      <p className="text-sm">{msg.content}</p>
-                    )}
+                    <div
+                      className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
+                        msg.role === "user"
+                          ? "bg-blue-600 text-white rounded-br-none"
+                          : "bg-white text-slate-800 border border-slate-200 rounded-bl-none shadow-sm"
+                      }`}
+                    >
+                      {msg.role === "assistant" ? (
+                        <Streamdown>{msg.content}</Streamdown>
+                      ) : (
+                        <p className="text-sm">{msg.content}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className={`flex gap-1 mt-2 ${msg.role === "user" ? "justify-end" : "justify-start"} opacity-0 group-hover:opacity-100 transition-opacity px-4`}>
+                    <button onClick={() => toast.success("👍 রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">👍</button>
+                    <button onClick={() => toast.success("❤️ রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">❤️</button>
+                    <button onClick={() => toast.success("😂 রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">😂</button>
+                    <button onClick={() => toast.success("😮 রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">😮</button>
                   </div>
                 </div>
               ))}

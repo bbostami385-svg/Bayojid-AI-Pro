@@ -1,6 +1,6 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, conversations, messages, conversationShares, premiumSubscriptions } from "../drizzle/schema";
+import { InsertUser, users, conversations, messages, conversationShares, premiumSubscriptions, messageReactions } from "../drizzle/schema";
 import { sql } from "drizzle-orm";
 import { ENV } from './_core/env';
 
@@ -274,4 +274,38 @@ export async function resetMonthlyUsage() {
   return db
     .update(premiumSubscriptions)
     .set({ messagesUsed: 0 });
+}
+
+
+export async function addReaction(messageId: number, userId: number, emoji: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.insert(messageReactions).values({
+    messageId,
+    userId,
+    emoji,
+  });
+}
+
+export async function getMessageReactions(messageId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(messageReactions).where(eq(messageReactions.messageId, messageId));
+}
+
+export async function removeReaction(messageId: number, userId: number, emoji: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db
+    .delete(messageReactions)
+    .where(
+      and(
+        eq(messageReactions.messageId, messageId),
+        eq(messageReactions.userId, userId),
+        eq(messageReactions.emoji, emoji)
+      )
+    );
 }

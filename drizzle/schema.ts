@@ -86,3 +86,18 @@ export const premiumSubscriptions = mysqlTable("premiumSubscriptions", {
 
 export type PremiumSubscription = typeof premiumSubscriptions.$inferSelect;
 export type InsertPremiumSubscription = typeof premiumSubscriptions.$inferInsert;
+
+
+/**
+ * Message Reactions table - stores emoji reactions on messages
+ */
+export const messageReactions = mysqlTable("messageReactions", {
+  id: int("id").autoincrement().primaryKey(),
+  messageId: int("messageId").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  emoji: varchar("emoji", { length: 10 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MessageReaction = typeof messageReactions.$inferSelect;
+export type InsertMessageReaction = typeof messageReactions.$inferInsert;

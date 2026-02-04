@@ -4,13 +4,15 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, MessageCircle, LogOut, Search } from "lucide-react";
+import { Loader2, Plus, MessageCircle, LogOut, Search, Moon, Sun, Smile } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Home() {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   const [searchQuery, setSearchQuery] = useState("");
   const { data: conversations, isLoading: conversationsLoading } =
@@ -83,14 +85,28 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-slate-800">AI চ্যাট</h1>
             <p className="text-sm text-slate-500">স্বাগতম, {user?.name}</p>
           </div>
-          <Button
-            onClick={logout}
-            variant="outline"
-            className="text-slate-600 hover:text-slate-800"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            লগআউট
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={toggleTheme}
+              variant="outline"
+              className="text-slate-600 hover:text-slate-800"
+              title="থিম পরিবর্তন করুন"
+            >
+              {theme === "light" ? (
+                <Moon className="w-4 h-4" />
+              ) : (
+                <Sun className="w-4 h-4" />
+              )}
+            </Button>
+            <Button
+              onClick={logout}
+              variant="outline"
+              className="text-slate-600 hover:text-slate-800"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              লগআউট
+            </Button>
+          </div>
         </div>
       </div>
 
