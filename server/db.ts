@@ -1,6 +1,6 @@
 import { asc, desc, eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, conversations, messages, conversationShares, premiumSubscriptions, messageReactions } from "../drizzle/schema";
+import { InsertUser, users, conversations, messages, conversationShares, premiumSubscriptions, messageReactions, groupChats, groupChatMembers, groupChatMessages, bookmarks, fileUploads } from "../drizzle/schema";
 import { sql } from "drizzle-orm";
 import { ENV } from './_core/env';
 
@@ -308,4 +308,102 @@ export async function removeReaction(messageId: number, userId: number, emoji: s
         eq(messageReactions.emoji, emoji)
       )
     );
+}
+
+
+// Group Chat Functions
+export async function createGroupChat(name: string, creatorId: number, description?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(groupChats).values({
+    name,
+    creatorId,
+    description,
+    isPublic: 1,
+  });
+  return result;
+}
+
+export async function addGroupChatMember(groupChatId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.insert(groupChatMembers).values({
+    groupChatId,
+    userId,
+  });
+}
+
+export async function getGroupChatMembers(groupChatId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(groupChatMembers).where(eq(groupChatMembers.groupChatId, groupChatId));
+}
+
+export async function getGroupChatMessages(groupChatId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(groupChatMessages).where(eq(groupChatMessages.groupChatId, groupChatId)).orderBy(asc(groupChatMessages.createdAt));
+}
+
+export async function addGroupChatMessage(groupChatId: number, userId: number, content: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.insert(groupChatMessages).values({
+    groupChatId,
+    userId,
+    content,
+  });
+}
+
+// Bookmark Functions
+export async function createBookmark(userId: number, messageId: number, title?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.insert(bookmarks).values({
+    userId,
+    messageId,
+    title,
+  });
+}
+
+export async function getUserBookmarks(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(bookmarks).where(eq(bookmarks.userId, userId)).orderBy(desc(bookmarks.createdAt));
+}
+
+export async function removeBookmark(bookmarkId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.delete(bookmarks).where(eq(bookmarks.id, bookmarkId));
+}
+
+// File Upload Functions
+export async function createFileUpload(userId: number, fileName: string, fileUrl: string, fileSize: number, mimeType: string, messageId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.insert(fileUploads).values({
+    userId,
+    messageId,
+    fileName,
+    fileUrl,
+    fileSize,
+    mimeType,
+  });
+}
+
+export async function getMessageFiles(messageId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(fileUploads).where(eq(fileUploads.messageId, messageId));
 }

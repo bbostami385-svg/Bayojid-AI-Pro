@@ -284,6 +284,81 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+
+  groupChat: router({
+    createGroupChat: protectedProcedure
+      .input(z.object({ name: z.string(), description: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const { createGroupChat, addGroupChatMember } = await import("./db");
+        const result = await createGroupChat(input.name, ctx.user.id, input.description);
+        await addGroupChatMember((result as any).insertId, ctx.user.id);
+        return { success: true, groupChatId: (result as any).insertId };
+      }),
+
+    addMember: protectedProcedure
+      .input(z.object({ groupChatId: z.number(), userId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { addGroupChatMember } = await import("./db");
+        await addGroupChatMember(input.groupChatId, input.userId);
+        return { success: true };
+      }),
+
+    getMessages: publicProcedure
+      .input(z.object({ groupChatId: z.number() }))
+      .query(async ({ input }) => {
+        const { getGroupChatMessages } = await import("./db");
+        return await getGroupChatMessages(input.groupChatId);
+      }),
+
+    sendMessage: protectedProcedure
+      .input(z.object({ groupChatId: z.number(), content: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { addGroupChatMessage } = await import("./db");
+        await addGroupChatMessage(input.groupChatId, ctx.user.id, input.content);
+        return { success: true };
+      }),
+  }),
+
+  bookmarks: router({
+    create: protectedProcedure
+      .input(z.object({ messageId: z.number(), title: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const { createBookmark } = await import("./db");
+        await createBookmark(ctx.user.id, input.messageId, input.title);
+        return { success: true };
+      }),
+
+    getBookmarks: protectedProcedure
+      .query(async ({ ctx }) => {
+        const { getUserBookmarks } = await import("./db");
+        return await getUserBookmarks(ctx.user.id);
+      }),
+
+    remove: protectedProcedure
+      .input(z.object({ bookmarkId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { removeBookmark } = await import("./db");
+        await removeBookmark(input.bookmarkId);
+        return { success: true };
+      }),
+  }),
+
+  files: router({
+    upload: protectedProcedure
+      .input(z.object({ fileName: z.string(), fileUrl: z.string(), fileSize: z.number(), mimeType: z.string(), messageId: z.number().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const { createFileUpload } = await import("./db");
+        await createFileUpload(ctx.user.id, input.fileName, input.fileUrl, input.fileSize, input.mimeType, input.messageId);
+        return { success: true };
+      }),
+
+    getMessageFiles: publicProcedure
+      .input(z.object({ messageId: z.number() }))
+      .query(async ({ input }) => {
+        const { getMessageFiles } = await import("./db");
+        return await getMessageFiles(input.messageId);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

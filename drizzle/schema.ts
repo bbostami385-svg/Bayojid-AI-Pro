@@ -101,3 +101,78 @@ export const messageReactions = mysqlTable("messageReactions", {
 
 export type MessageReaction = typeof messageReactions.$inferSelect;
 export type InsertMessageReaction = typeof messageReactions.$inferInsert;
+
+
+/**
+ * Group Chats table - stores group chat information
+ */
+export const groupChats = mysqlTable("groupChats", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  creatorId: int("creatorId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  isPublic: int("isPublic").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GroupChat = typeof groupChats.$inferSelect;
+export type InsertGroupChat = typeof groupChats.$inferInsert;
+
+/**
+ * Group Chat Members table - stores members of group chats
+ */
+export const groupChatMembers = mysqlTable("groupChatMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  groupChatId: int("groupChatId").notNull().references(() => groupChats.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+});
+
+export type GroupChatMember = typeof groupChatMembers.$inferSelect;
+export type InsertGroupChatMember = typeof groupChatMembers.$inferInsert;
+
+/**
+ * Group Chat Messages table - stores messages in group chats
+ */
+export const groupChatMessages = mysqlTable("groupChatMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  groupChatId: int("groupChatId").notNull().references(() => groupChats.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type GroupChatMessage = typeof groupChatMessages.$inferSelect;
+export type InsertGroupChatMessage = typeof groupChatMessages.$inferInsert;
+
+/**
+ * Bookmarks table - stores bookmarked messages
+ */
+export const bookmarks = mysqlTable("bookmarks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  messageId: int("messageId").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Bookmark = typeof bookmarks.$inferSelect;
+export type InsertBookmark = typeof bookmarks.$inferInsert;
+
+/**
+ * File Uploads table - stores file information
+ */
+export const fileUploads = mysqlTable("fileUploads", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  messageId: int("messageId").references(() => messages.id, { onDelete: "cascade" }),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  fileUrl: text("fileUrl").notNull(),
+  fileSize: int("fileSize").notNull(),
+  mimeType: varchar("mimeType", { length: 100 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FileUpload = typeof fileUploads.$inferSelect;
+export type InsertFileUpload = typeof fileUploads.$inferInsert;

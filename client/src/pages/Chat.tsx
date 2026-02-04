@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Trash2, Mic, MicOff, Download, Bell } from "lucide-react";
+import { Loader2, Send, Trash2, Mic, MicOff, Download, Bell, Upload } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -255,6 +255,7 @@ export default function Chat() {
                     <button onClick={() => toast.success("❤️ রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">❤️</button>
                     <button onClick={() => toast.success("😂 রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">😂</button>
                     <button onClick={() => toast.success("😮 রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">😮</button>
+                    <button onClick={() => toast.success("🔖 বুকমার্ক করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">🔖</button>
                   </div>
                 </div>
               ))}
@@ -285,6 +286,24 @@ export default function Chat() {
             disabled={isLoading}
             className="flex-1 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
           />
+          <Button
+            type="button"
+            onClick={() => {
+              const fileInput = document.createElement('input');
+              fileInput.type = 'file';
+              fileInput.onchange = () => {
+                if (fileInput.files?.[0]) {
+                  toast.success('File: ' + fileInput.files[0].name + ' ready to share');
+                }
+              };
+              fileInput.click();
+            }}
+            variant="outline"
+            size="icon"
+            className="text-slate-600"
+          >
+            <Upload className="w-4 h-4" />
+          </Button>
           <Button
             type="button"
             onClick={
