@@ -50,6 +50,20 @@
       "when": 1770228598002,
       "tag": "0006_strange_kate_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1772617421973,
+      "tag": "0007_boring_miracleman",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1772617947720,
+      "tag": "0008_nostalgic_ricochet",
+      "breakpoints": true
     }
   ]
 }

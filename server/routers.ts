@@ -15,6 +15,15 @@ import {
   deleteShareLink,
   getUserSubscription,
   createOrUpdateSubscription,
+  getUserProfile,
+  createOrUpdateUserProfile,
+  updateUserProfile,
+  deleteUserProfile,
+  createChatTemplate,
+  getUserChatTemplates,
+  getChatTemplate,
+  updateChatTemplate,
+  deleteChatTemplate,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 
@@ -357,6 +366,81 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { getMessageFiles } = await import("./db");
         return await getMessageFiles(input.messageId);
+      }),
+  }),
+
+  profile: router({
+    getProfile: protectedProcedure.query(async ({ ctx }) => {
+      return await getUserProfile(ctx.user.id);
+    }),
+
+    updateProfile: protectedProcedure
+      .input(
+        z.object({
+          avatar: z.string().optional(),
+          bio: z.string().optional(),
+          status: z.string().optional(),
+
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await createOrUpdateUserProfile(ctx.user.id, input);
+        return { success: true };
+      }),
+
+    deleteProfile: protectedProcedure.mutation(async ({ ctx }) => {
+      await deleteUserProfile(ctx.user.id);
+      return { success: true };
+    }),
+  }),
+
+  templates: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          title: z.string(),
+          content: z.string(),
+          category: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await createChatTemplate(ctx.user.id, input.title, input.content, input.category);
+        return { success: true };
+      }),
+
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return await getUserChatTemplates(ctx.user.id);
+    }),
+
+    get: protectedProcedure
+      .input(z.object({ templateId: z.number() }))
+      .query(async ({ input }) => {
+        return await getChatTemplate(input.templateId);
+      }),
+
+    update: protectedProcedure
+      .input(
+        z.object({
+          templateId: z.number(),
+          title: z.string().optional(),
+          content: z.string().optional(),
+          category: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await updateChatTemplate(input.templateId, {
+          title: input.title,
+          content: input.content,
+          category: input.category,
+        });
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ templateId: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteChatTemplate(input.templateId);
+        return { success: true };
       }),
   }),
 });

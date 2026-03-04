@@ -4,7 +4,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, MessageCircle, LogOut, Search, Moon, Sun, Smile } from "lucide-react";
+import { Loader2, Plus, MessageCircle, LogOut, Search, Moon, Sun, Smile, User, Zap, BarChart3 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -86,6 +86,30 @@ export default function Home() {
             <p className="text-sm text-slate-500">স্বাগতম, {user?.name}</p>
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={() => navigate("/analytics")}
+              variant="outline"
+              className="text-slate-600 hover:text-slate-800"
+              title="বিশ্লেষণ / Analytics"
+            >
+              <BarChart3 className="w-4 h-4" />
+            </Button>
+            <Button
+              onClick={() => navigate("/templates")}
+              variant="outline"
+              className="text-slate-600 hover:text-slate-800"
+              title="চ্যাট টেমপ্লেট / Chat Templates"
+            >
+              <Zap className="w-4 h-4" />
+            </Button>
+            <Button
+              onClick={() => navigate("/profile")}
+              variant="outline"
+              className="text-slate-600 hover:text-slate-800"
+              title="প্রোফাইল"
+            >
+              <User className="w-4 h-4" />
+            </Button>
             <Button
               onClick={toggleTheme}
               variant="outline"

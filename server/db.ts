@@ -1,7 +1,6 @@
-import { asc, desc, eq, and } from "drizzle-orm";
+import { asc, desc, eq, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, conversations, messages, conversationShares, premiumSubscriptions, messageReactions, groupChats, groupChatMembers, groupChatMessages, bookmarks, fileUploads } from "../drizzle/schema";
-import { sql } from "drizzle-orm";
+import { InsertUser, users, conversations, messages, conversationShares, premiumSubscriptions, messageReactions, groupChats, groupChatMembers, groupChatMessages, bookmarks, fileUploads, userProfiles, UserProfile, InsertUserProfile, chatTemplates, ChatTemplate, InsertChatTemplate } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -406,4 +405,90 @@ export async function getMessageFiles(messageId: number) {
   if (!db) return [];
 
   return db.select().from(fileUploads).where(eq(fileUploads.messageId, messageId));
+}
+
+
+// User Profile Functions
+export async function getUserProfile(userId: number): Promise<UserProfile | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createOrUpdateUserProfile(userId: number, data: Partial<InsertUserProfile>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await getUserProfile(userId);
+  
+  if (existing) {
+    return db.update(userProfiles)
+      .set(data)
+      .where(eq(userProfiles.userId, userId));
+  } else {
+    return db.insert(userProfiles).values({
+      userId,
+      ...data,
+    });
+  }
+}
+
+export async function updateUserProfile(userId: number, data: Partial<InsertUserProfile>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.update(userProfiles)
+    .set(data)
+    .where(eq(userProfiles.userId, userId));
+}
+
+export async function deleteUserProfile(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.delete(userProfiles).where(eq(userProfiles.userId, userId));
+}
+
+// Chat Template Functions
+export async function createChatTemplate(userId: number, title: string, content: string, category?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.insert(chatTemplates).values({
+    userId,
+    title,
+    content,
+    category,
+  });
+}
+
+export async function getUserChatTemplates(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(chatTemplates).where(eq(chatTemplates.userId, userId)).orderBy(desc(chatTemplates.createdAt));
+}
+
+export async function getChatTemplate(templateId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(chatTemplates).where(eq(chatTemplates.id, templateId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateChatTemplate(templateId: number, data: Partial<InsertChatTemplate>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.update(chatTemplates).set(data).where(eq(chatTemplates.id, templateId));
+}
+
+export async function deleteChatTemplate(templateId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.delete(chatTemplates).where(eq(chatTemplates.id, templateId));
 }

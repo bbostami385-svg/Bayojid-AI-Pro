@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlTable, varchar, text, timestamp, mysqlEnum } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -176,3 +176,32 @@ export const fileUploads = mysqlTable("fileUploads", {
 
 export type FileUpload = typeof fileUploads.$inferSelect;
 export type InsertFileUpload = typeof fileUploads.$inferInsert;
+
+/**
+ * User Profiles table - stores user profile customization
+ */
+export const userProfiles = mysqlTable("userProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  avatar: text("avatar"),
+  bio: text("bio"),
+  status: varchar("status", { length: 100 }),
+});
+
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type InsertUserProfile = typeof userProfiles.$inferInsert;
+
+/**
+ * Chat Templates table - stores quick response templates for common questions
+ */
+export const chatTemplates = mysqlTable("chatTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  category: varchar("category", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChatTemplate = typeof chatTemplates.$inferSelect;
+export type InsertChatTemplate = typeof chatTemplates.$inferInsert;

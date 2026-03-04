@@ -6,6 +6,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Chat from "./pages/Chat";
+import Profile from "./pages/Profile";
+import ChatTemplates from "./pages/ChatTemplates";
+import Analytics from "./pages/Analytics";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -13,6 +16,9 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path="/chat/:id" component={Chat} />
+      <Route path="/profile" component={Profile} />
+      <Route path="/templates" component={ChatTemplates} />
+      <Route path="/analytics" component={Analytics} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
