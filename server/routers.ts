@@ -25,6 +25,12 @@ import {
   updateChatTemplate,
   deleteChatTemplate,
 } from "./db";
+import { imageRouter } from "./imageGeneration";
+import { documentRouter } from "./documentAnalysis";
+import { suggestionsRouter } from "./suggestions";
+import { encryptionRouter } from "./encryption";
+import { translationRouter } from "./translation";
+import { searchRouter } from "./search";
 import { invokeLLM } from "./_core/llm";
 
 const personalityPrompts: Record<string, string> = {
@@ -393,6 +399,13 @@ export const appRouter = router({
       return { success: true };
     }),
   }),
+
+  image: imageRouter,
+  document: documentRouter,
+  suggestions: suggestionsRouter,
+  encryption: encryptionRouter,
+  translation: translationRouter,
+  search: searchRouter,
 
   templates: router({
     create: protectedProcedure
