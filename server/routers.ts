@@ -34,6 +34,10 @@ import { searchRouter } from "./search";
 import { mediaGenerationRouter } from "./mediaGeneration";
 import { subscriptionRouter } from "./subscription";
 import { usageTrackingRouter } from "./usageTracking";
+import { socialSharingRouter } from "./socialSharing";
+import { conversationRatingRouter } from "./conversationRating";
+import { customAIModelRouter } from "./customAIModel";
+import { videoEditorRouter } from "./videoEditor";
 import { invokeLLM } from "./_core/llm";
 
 const personalityPrompts: Record<string, string> = {
@@ -412,6 +416,10 @@ export const appRouter = router({
   media: mediaGenerationRouter,
   subscription: subscriptionRouter,
   usage: usageTrackingRouter,
+  sharing: socialSharingRouter,
+  rating: conversationRatingRouter,
+  customModels: customAIModelRouter,
+  videoEditor: videoEditorRouter,
 
   templates: router({
     create: protectedProcedure
