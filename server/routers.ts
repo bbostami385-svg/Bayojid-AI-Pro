@@ -31,6 +31,9 @@ import { suggestionsRouter } from "./suggestions";
 import { encryptionRouter } from "./encryption";
 import { translationRouter } from "./translation";
 import { searchRouter } from "./search";
+import { mediaGenerationRouter } from "./mediaGeneration";
+import { subscriptionRouter } from "./subscription";
+import { usageTrackingRouter } from "./usageTracking";
 import { invokeLLM } from "./_core/llm";
 
 const personalityPrompts: Record<string, string> = {
@@ -406,6 +409,9 @@ export const appRouter = router({
   encryption: encryptionRouter,
   translation: translationRouter,
   search: searchRouter,
+  media: mediaGenerationRouter,
+  subscription: subscriptionRouter,
+  usage: usageTrackingRouter,
 
   templates: router({
     create: protectedProcedure

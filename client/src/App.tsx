@@ -9,6 +9,7 @@ import Chat from "./pages/Chat";
 import Profile from "./pages/Profile";
 import ChatTemplates from "./pages/ChatTemplates";
 import Analytics from "./pages/Analytics";
+import { MediaGeneration } from "./pages/MediaGeneration";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/templates" component={ChatTemplates} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/media" component={MediaGeneration} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
