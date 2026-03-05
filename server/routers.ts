@@ -42,6 +42,8 @@ import { customAIModelRouter } from "./customAIModel";
 import { videoEditorRouter } from "./videoEditor";
 import { notificationsRouter } from "./notifications";
 import { communityRouter } from "./community";
+import { analyticsExportRouter } from "./analyticsExport";
+import { challengesRouter } from "./challenges";
 import { invokeLLM } from "./_core/llm";
 
 const personalityPrompts: Record<string, string> = {
@@ -428,6 +430,8 @@ export const appRouter = router({
   videoEditor: videoEditorRouter,
   notifications: notificationsRouter,
   community: communityRouter,
+  export: analyticsExportRouter,
+  challenges: challengesRouter,
 
   templates: router({
     create: protectedProcedure

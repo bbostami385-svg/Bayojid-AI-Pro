@@ -16,6 +16,8 @@ import Notifications from "./pages/Notifications";
 import Community from "./pages/Community";
 import ModerationDashboard from "./pages/ModerationDashboard";
 import Reputation from "./pages/Reputation";
+import Challenges from "./pages/Challenges";
+import ExportAnalytics from "./pages/ExportAnalytics";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -33,6 +35,8 @@ function Router() {
       <Route path="/community" component={Community} />
       <Route path="/moderation" component={ModerationDashboard} />
       <Route path="/reputation" component={Reputation} />
+      <Route path="/challenges" component={Challenges} />
+      <Route path="/export" component={ExportAnalytics} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
