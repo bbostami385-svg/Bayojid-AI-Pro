@@ -12,6 +12,8 @@ import Analytics from "./pages/Analytics";
 import { MediaGeneration } from "./pages/MediaGeneration";
 import CustomAIModels from "./pages/CustomAIModels";
 import VideoEditor from "./pages/VideoEditor";
+import Notifications from "./pages/Notifications";
+import Community from "./pages/Community";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -25,6 +27,8 @@ function Router() {
       <Route path="/media" component={MediaGeneration} />
       <Route path="/models" component={CustomAIModels} />
       <Route path="/video-editor" component={VideoEditor} />
+      <Route path="/notifications" component={Notifications} />
+      <Route path="/community" component={Community} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
