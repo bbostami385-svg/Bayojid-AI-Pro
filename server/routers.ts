@@ -33,6 +33,8 @@ import { translationRouter } from "./translation";
 import { searchRouter } from "./search";
 import { mediaGenerationRouter } from "./mediaGeneration";
 import { subscriptionRouter } from "./subscription";
+import { moderationRouter } from "./moderation";
+import { reputationRouter } from "./reputation";
 import { usageTrackingRouter } from "./usageTracking";
 import { socialSharingRouter } from "./socialSharing";
 import { conversationRatingRouter } from "./conversationRating";
@@ -418,6 +420,8 @@ export const appRouter = router({
   media: mediaGenerationRouter,
   subscription: subscriptionRouter,
   usage: usageTrackingRouter,
+  moderation: moderationRouter,
+  reputation: reputationRouter,
   sharing: socialSharingRouter,
   rating: conversationRatingRouter,
   customModels: customAIModelRouter,
