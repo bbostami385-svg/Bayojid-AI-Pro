@@ -17,6 +17,7 @@ import Community from "./pages/Community";
 import ModerationDashboard from "./pages/ModerationDashboard";
 import Reputation from "./pages/Reputation";
 import Challenges from "./pages/Challenges";
+import { Payment } from "./pages/Payment";
 import ExportAnalytics from "./pages/ExportAnalytics";
 
 function Router() {
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/moderation" component={ModerationDashboard} />
       <Route path="/reputation" component={Reputation} />
       <Route path="/challenges" component={Challenges} />
+      <Route path="/payment" component={Payment} />
       <Route path="/export" component={ExportAnalytics} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}

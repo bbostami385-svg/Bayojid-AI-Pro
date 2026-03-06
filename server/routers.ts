@@ -46,6 +46,8 @@ import { analyticsExportRouter } from "./analyticsExport";
 import { challengesRouter } from "./challenges";
 import { challengeNotificationsRouter } from "./challengeNotifications";
 import { leaderboardSharingRouter } from "./leaderboardSharing";
+import { stripePaymentRouter } from "./stripePayment";
+import { conversationMemoryRouter } from "./conversationMemory";
 import { invokeLLM } from "./_core/llm";
 
 const personalityPrompts: Record<string, string> = {
@@ -436,6 +438,8 @@ export const appRouter = router({
   challenges: challengesRouter,
   challengeNotifications: challengeNotificationsRouter,
   leaderboardSharing: leaderboardSharingRouter,
+  payment: stripePaymentRouter,
+  conversationMemory: conversationMemoryRouter,
 
   templates: router({
     create: protectedProcedure
