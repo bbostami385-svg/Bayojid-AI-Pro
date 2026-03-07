@@ -18,6 +18,8 @@ import ModerationDashboard from "./pages/ModerationDashboard";
 import Reputation from "./pages/Reputation";
 import Challenges from "./pages/Challenges";
 import { Payment } from "./pages/Payment";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailed from "./pages/PaymentFailed";
 import ExportAnalytics from "./pages/ExportAnalytics";
 
 function Router() {
@@ -38,6 +40,8 @@ function Router() {
       <Route path="/reputation" component={Reputation} />
       <Route path="/challenges" component={Challenges} />
       <Route path="/payment" component={Payment} />
+      <Route path="/payment/success" component={PaymentSuccess} />
+      <Route path="/payment/failed" component={PaymentFailed} />
       <Route path="/export" component={ExportAnalytics} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}

@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { initializeWebSocketServer } from "./websocket";
 import multer from "multer";
 import { transcribeAudio } from "./voiceTranscription";
 import type { Request, Response } from "express";
@@ -39,6 +40,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  
+  // Initialize WebSocket server for real-time collaboration
+  initializeWebSocketServer(server);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -89,6 +93,22 @@ async function startServer() {
   } else {
     serveStatic(app);
   }
+  
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+  
+  // Collaboration stats endpoint
+  app.get("/api/collaboration/stats/:conversationId", (req, res) => {
+    const { getConnectionCount, getActiveUsers } = require("./websocket");
+    const conversationId = req.params.conversationId;
+    res.json({
+      conversationId,
+      connectionCount: getConnectionCount(conversationId),
+      activeUsers: getActiveUsers(conversationId),
+    });
+  });
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
