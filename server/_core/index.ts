@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { initializeWebSocketServer } from "./websocket";
+import { handleSSLCommerzWebhook } from "../sslcommerzWebhook";
 import multer from "multer";
 import { transcribeAudio } from "./voiceTranscription";
 import type { Request, Response } from "express";
@@ -48,6 +49,19 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  
+  // SSLCommerz webhook endpoint
+  app.post("/api/sslcommerz/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    // Parse body if it's raw
+    if (Buffer.isBuffer(req.body)) {
+      try {
+        req.body = JSON.parse(req.body.toString());
+      } catch (e) {
+        console.error("[Webhook] Failed to parse body", e);
+      }
+    }
+    await handleSSLCommerzWebhook(req, res);
+  });
   
   // Voice transcription endpoint
   const upload = multer({ storage: multer.memoryStorage() });

@@ -8,6 +8,7 @@ import { Loader2, Send, Trash2, Mic, MicOff, Download, Bell, Upload } from "luci
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useRealtimeCollaboration } from "@/hooks/useRealtimeCollaboration";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +41,13 @@ export default function Chat() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // WebSocket collaboration
+  const { activeUsers, isConnected } = useRealtimeCollaboration({
+    conversationId: conversationId?.toString() || "",
+    userId: user?.id || 0,
+    userName: user?.name || "Anonymous",
+  });
 
   // Queries
   const { data: messagesList, isLoading: messagesLoading } =
@@ -196,7 +204,15 @@ export default function Chat() {
       <div className="border-b border-slate-200 bg-white shadow-sm px-6 py-4 flex justify-between items-center">
         <div>
           <h1 className="text-xl font-semibold text-slate-800">চ্যাট</h1>
-          <p className="text-xs text-slate-500 mt-1">AI ব্যক্তিত্ব: {personality === "friendly" ? "বন্ধুত্বপূর্ণ" : personality === "professional" ? "পেশাদার" : personality === "teacher" ? "শিক্ষক" : "সৃজনশীল"}</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-xs text-slate-500">AI ব্যক্তিত্ব: {personality === "friendly" ? "বন্ধুত্বপূর্ণ" : personality === "professional" ? "পেশাদার" : personality === "teacher" ? "শিক্ষক" : "সৃজনশীল"}</p>
+            {isConnected && activeUsers.length > 0 && (
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span className="text-xs text-slate-600">{activeUsers.length} সহযোগী</span>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
           <Button
