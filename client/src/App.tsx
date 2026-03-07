@@ -20,6 +20,7 @@ import Challenges from "./pages/Challenges";
 import { Payment } from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
+import PaymentHistory from "./pages/PaymentHistory";
 import ExportAnalytics from "./pages/ExportAnalytics";
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/payment" component={Payment} />
       <Route path="/payment/success" component={PaymentSuccess} />
       <Route path="/payment/failed" component={PaymentFailed} />
+      <Route path="/payment/history" component={PaymentHistory} />
       <Route path="/export" component={ExportAnalytics} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}

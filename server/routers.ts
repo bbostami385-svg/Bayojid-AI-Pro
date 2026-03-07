@@ -49,6 +49,7 @@ import { leaderboardSharingRouter } from "./leaderboardSharing";
 import { stripePaymentRouter } from "./stripePayment";
 import { conversationMemoryRouter } from "./conversationMemory";
 import { sslcommerzPaymentRouter } from "./sslcommerzPaymentRouter";
+import { refundRouter } from "./refundRouter";
 import { invokeLLM } from "./_core/llm";
 
 const personalityPrompts: Record<string, string> = {
@@ -441,6 +442,7 @@ export const appRouter = router({
   leaderboardSharing: leaderboardSharingRouter,
   payment: stripePaymentRouter,
   sslcommerzPayment: sslcommerzPaymentRouter,
+  refund: refundRouter,
   conversationMemory: conversationMemoryRouter,
 
   templates: router({
