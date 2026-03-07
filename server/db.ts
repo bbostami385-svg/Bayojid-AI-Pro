@@ -1,6 +1,6 @@
 import { asc, desc, eq, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, conversations, messages, conversationShares, premiumSubscriptions, messageReactions, groupChats, groupChatMembers, groupChatMessages, bookmarks, fileUploads, userProfiles, UserProfile, InsertUserProfile, chatTemplates, ChatTemplate, InsertChatTemplate } from "../drizzle/schema";
+import { InsertUser, users, conversations, messages, conversationShares, premiumSubscriptions, messageReactions, groupChats, groupChatMembers, groupChatMessages, bookmarks, fileUploads, userProfiles, UserProfile, InsertUserProfile, chatTemplates, ChatTemplate, InsertChatTemplate, sslcommerzTransactions, paymentInvoices, subscriptionPlans, userSubscriptions } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;

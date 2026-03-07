@@ -1,4 +1,4 @@
-import { int, mysqlTable, varchar, text, timestamp, mysqlEnum } from "drizzle-orm/mysql-core";
+import { int, mysqlTable, varchar, text, timestamp, mysqlEnum, decimal, json, boolean } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -205,3 +205,99 @@ export const chatTemplates = mysqlTable("chatTemplates", {
 
 export type ChatTemplate = typeof chatTemplates.$inferSelect;
 export type InsertChatTemplate = typeof chatTemplates.$inferInsert;
+
+
+/**
+ * SSLCommerz Payment Transactions table - stores payment transaction records
+ */
+export const sslcommerzTransactions = mysqlTable("sslcommerzTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  transactionId: varchar("transactionId", { length: 100 }).notNull().unique(),
+  plan: mysqlEnum("plan", ["free", "pro", "premium"]).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("BDT").notNull(),
+  status: mysqlEnum("status", ["pending", "completed", "failed", "cancelled"]).default("pending").notNull(),
+  paymentMethod: varchar("paymentMethod", { length: 50 }),
+  sslcommerzRef: varchar("sslcommerzRef", { length: 100 }),
+  bankTransactionId: varchar("bankTransactionId", { length: 100 }),
+  cardBrand: varchar("cardBrand", { length: 50 }),
+  cardNumber: varchar("cardNumber", { length: 20 }),
+  customerName: varchar("customerName", { length: 255 }),
+  customerEmail: varchar("customerEmail", { length: 320 }),
+  customerPhone: varchar("customerPhone", { length: 20 }),
+  ipAddress: varchar("ipAddress", { length: 50 }),
+  userAgent: text("userAgent"),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SslcommerzTransaction = typeof sslcommerzTransactions.$inferSelect;
+export type InsertSslcommerzTransaction = typeof sslcommerzTransactions.$inferInsert;
+
+/**
+ * Payment Invoices table - stores invoice records for transactions
+ */
+export const paymentInvoices = mysqlTable("paymentInvoices", {
+  id: int("id").autoincrement().primaryKey(),
+  transactionId: int("transactionId").notNull().references(() => sslcommerzTransactions.id, { onDelete: "cascade" }),
+  invoiceNumber: varchar("invoiceNumber", { length: 50 }).notNull().unique(),
+  invoiceDate: timestamp("invoiceDate").defaultNow().notNull(),
+  dueDate: timestamp("dueDate"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  taxAmount: decimal("taxAmount", { precision: 10, scale: 2 }).default("0"),
+  totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
+  pdfUrl: text("pdfUrl"),
+  status: mysqlEnum("status", ["draft", "sent", "viewed", "paid", "overdue"]).default("draft").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PaymentInvoice = typeof paymentInvoices.$inferSelect;
+export type InsertPaymentInvoice = typeof paymentInvoices.$inferInsert;
+
+/**
+ * Subscription Plans table - stores available subscription plans
+ */
+export const subscriptionPlans = mysqlTable("subscriptionPlans", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("BDT").notNull(),
+  billingCycle: mysqlEnum("billingCycle", ["monthly", "yearly"]).notNull(),
+  features: json("features").$type<string[]>().default([]),
+  videoLimit: int("videoLimit").default(0),
+  videoDuration: int("videoDuration").default(0), // in seconds
+  videoQuality: varchar("videoQuality", { length: 20 }).default("480p"),
+  imageLimit: int("imageLimit").default(0),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+
+/**
+ * User Subscriptions table - stores active subscriptions for users
+ */
+export const userSubscriptions = mysqlTable("userSubscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  planId: int("planId").notNull().references(() => subscriptionPlans.id),
+  transactionId: int("transactionId").references(() => sslcommerzTransactions.id),
+  status: mysqlEnum("status", ["active", "cancelled", "expired", "suspended"]).default("active").notNull(),
+  startDate: timestamp("startDate").defaultNow().notNull(),
+  endDate: timestamp("endDate"),
+  autoRenew: boolean("autoRenew").default(true).notNull(),
+  nextBillingDate: timestamp("nextBillingDate"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
