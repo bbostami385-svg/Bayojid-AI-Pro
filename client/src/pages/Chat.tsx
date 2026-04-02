@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Trash2, Mic, MicOff, Download, Bell, Upload } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Send, Trash2, Download, Bell, Copy, RefreshCw } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useRealtimeCollaboration } from "@/hooks/useRealtimeCollaboration";
+import { useAIModels } from "@/hooks/useAIModels";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,36 +21,41 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface Message {
+  id?: number;
+  role: string;
+  content: string;
+  modelUsed?: string;
+  tokens?: number;
+  responseTime?: number;
+  timestamp?: number;
+}
+
 export default function Chat() {
   const [, params] = useRoute("/chat/:id");
   const conversationId = params?.id ? parseInt(params.id) : null;
   const { user } = useAuth();
-  const searchParams = new URLSearchParams(window.location.search);
-  const personalityParam = searchParams.get("personality") || "friendly";
 
-  useState(() => {
-    setPersonality(personalityParam);
-  });
+  // AI মডেল হুক
+  const {
+    selectedModel,
+    isLoading: aiLoading,
+    error: aiError,
+    availableModels,
+    chat: aiChat,
+    switchModel,
+    performanceStats,
+    bestModel
+  } = useAIModels();
 
-  const [messages, setMessages] = useState<
-    Array<{ id?: number; role: string; content: string }>
-  >([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [personality, setPersonality] = useState("friendly");
-  const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const [useAIModel, setUseAIModel] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
-  
-  // WebSocket collaboration
-  const { activeUsers, isConnected } = useRealtimeCollaboration({
-    conversationId: conversationId?.toString() || "",
-    userId: user?.id || 0,
-    userName: user?.name || "Anonymous",
-  });
 
   // Queries
   const { data: messagesList, isLoading: messagesLoading } =
@@ -71,75 +79,69 @@ export default function Chat() {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  const handleStartRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: "audio/webm",
-        });
-        const formData = new FormData();
-        formData.append("audio", audioBlob);
-
-        try {
-          const response = await fetch("/api/transcribe", {
-            method: "POST",
-            body: formData,
-          });
-          const data = await response.json();
-          setInput(data.text || "");
-        } catch (error) {
-          console.error("Transcription failed:", error);
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error("Failed to start recording:", error);
-    }
-  };
-
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      mediaRecorderRef.current.stream
-        .getTracks()
-        .forEach((track) => track.stop());
-    }
-  };
-
+  /**
+   * বার্তা পাঠান - AI মডেল বা ডিফল্ট
+   */
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !conversationId) return;
 
     setIsLoading(true);
     try {
-      const result = await sendMessageMutation.mutateAsync({
-        conversationId,
-        message: input,
-        personality,
-      });
+      if (useAIModel && availableModels.length > 0) {
+        // AI মডেল দিয়ে চ্যাট করুন
+        const conversationMessages = messages.map(m => ({
+          role: m.role as 'user' | 'assistant' | 'system',
+          content: m.content
+        }));
+        conversationMessages.push({ role: 'user', content: input });
 
-      setMessages((prev) => [
-        ...prev,
-        { role: "user", content: result.userMessage },
-        { role: "assistant", content: result.assistantMessage },
-      ]);
+        const response = await aiChat(conversationMessages);
 
-      // নোটিফিকেশন দেখান
-      toast.success("নতুন উত্তর পেয়েছেন / New response received", {
-        icon: <Bell className="w-4 h-4" />,
-      });
+        if (response) {
+          const newMessages: Message[] = [
+            { role: "user", content: input },
+            {
+              role: "assistant",
+              content: response.content,
+              modelUsed: response.modelName,
+              tokens: response.tokens,
+              responseTime: response.responseTime,
+              timestamp: Date.now()
+            }
+          ];
+
+          setMessages((prev) => [...prev, ...newMessages]);
+
+          // ডাটাবেসে সংরক্ষণ করুন
+          await sendMessageMutation.mutateAsync({
+            conversationId,
+            message: input,
+            personality,
+          });
+
+          toast.success(`${response.modelName} থেকে উত্তর পেয়েছেন`, {
+            icon: <Bell className="w-4 h-4" />,
+          });
+        }
+      } else {
+        // ডিফল্ট চ্যাট ব্যবহার করুন
+        const result = await sendMessageMutation.mutateAsync({
+          conversationId,
+          message: input,
+          personality,
+        });
+
+        setMessages((prev) => [
+          ...prev,
+          { role: "user", content: result.userMessage },
+          { role: "assistant", content: result.assistantMessage },
+        ]);
+
+        toast.success("নতুন উত্তর পেয়েছেন", {
+          icon: <Bell className="w-4 h-4" />,
+        });
+      }
 
       if (isFirstMessage) {
         await updateTitleMutation.mutateAsync({
@@ -152,11 +154,15 @@ export default function Chat() {
       setInput("");
     } catch (error) {
       console.error("Failed to send message:", error);
+      toast.error("বার্তা পাঠাতে ব্যর্থ হয়েছে");
     } finally {
       setIsLoading(false);
     }
   };
 
+  /**
+   * কথোপকথন মুছুন
+   */
   const handleDeleteConversation = async () => {
     if (!conversationId) return;
 
@@ -168,6 +174,17 @@ export default function Chat() {
     }
   };
 
+  /**
+   * বার্তা কপি করুন
+   */
+  const copyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast.success("কপি করা হয়েছে");
+  };
+
+  /**
+   * টেক্সট হিসাবে এক্সপোর্ট করুন
+   */
   const handleExportAsText = () => {
     const textContent = messages
       .map((msg) =>
@@ -199,42 +216,101 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <div className="border-b border-slate-200 bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-800">চ্যাট</h1>
-          <div className="flex items-center gap-3 mt-1">
-            <p className="text-xs text-slate-500">AI ব্যক্তিত্ব: {personality === "friendly" ? "বন্ধুত্বপূর্ণ" : personality === "professional" ? "পেশাদার" : personality === "teacher" ? "শিক্ষক" : "সৃজনশীল"}</p>
-            {isConnected && activeUsers.length > 0 && (
-              <div className="flex items-center gap-1">
-                <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span className="text-xs text-slate-600">{activeUsers.length} সহযোগী</span>
-              </div>
-            )}
+    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 to-slate-800">
+      {/* হেডার */}
+      <div className="border-b border-slate-700 bg-slate-800 shadow-sm px-6 py-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-semibold text-white">চ্যাট</h1>
+            <div className="flex items-center gap-3 mt-1">
+              {useAIModel && availableModels.length > 0 ? (
+                <>
+                  <Badge className="bg-blue-600 text-white text-xs">
+                    {selectedModel.toUpperCase()}
+                  </Badge>
+                  {bestModel && (
+                    <Badge className="bg-green-600 text-white text-xs">
+                      সেরা: {bestModel.name}
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-slate-400">AI ব্যক্তিত্ব: {personality === "friendly" ? "বন্ধুত্বপূর্ণ" : personality === "professional" ? "পেশাদার" : personality === "teacher" ? "শিক্ষক" : "সৃজনশীল"}</p>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleExportAsText}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-          >
-            <Download className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDeleteDialog(true)}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleExportAsText}
+              className="text-blue-400 hover:text-blue-300 hover:bg-slate-700"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-red-400 hover:text-red-300 hover:bg-slate-700"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Messages */}
+      {/* AI মডেল সিলেক্টর */}
+      {availableModels.length > 0 && (
+        <Card className="m-4 bg-slate-800 border-slate-700">
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={useAIModel}
+                onChange={(e) => setUseAIModel(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <label className="text-sm text-slate-300">AI মডেল ব্যবহার করুন</label>
+            </div>
+
+            {useAIModel && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-slate-300 block mb-2">মডেল নির্বাচন করুন</label>
+                  <Select value={selectedModel} onValueChange={(value) => switchModel(value as any)}>
+                    <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-200">
+                      <SelectValue placeholder="মডেল নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-700 border-slate-600">
+                      {availableModels.map((model) => (
+                        <SelectItem key={model.id} value={model.id} className="text-slate-200">
+                          {model.icon} {model.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {performanceStats.length > 0 && (
+                  <div className="bg-slate-700/50 p-3 rounded text-xs text-slate-300">
+                    <p className="font-semibold mb-1">পারফরম্যান্স:</p>
+                    <p>সময়: {performanceStats[0]?.averageResponseTime || 0}ms</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {aiError && (
+              <div className="bg-red-900/30 border border-red-700 rounded p-2 text-sm text-red-200">
+                {aiError}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* বার্তা এরিয়া */}
       <ScrollArea className="flex-1 px-6 py-8">
         <div className="space-y-4 max-w-3xl mx-auto">
           {messagesLoading ? (
@@ -243,125 +319,100 @@ export default function Chat() {
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-slate-500 text-lg">কথোপকথন শুরু করুন</p>
+              <p className="text-slate-400 text-lg">কথোপকথন শুরু করুন</p>
             </div>
           ) : (
             <>
               {messages.map((msg, idx) => (
-                <div key={idx} className="group">
+                <div
+                  key={idx}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
                   <div
-                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                      msg.role === "user"
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-700 text-slate-200"
+                    }`}
                   >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
-                        msg.role === "user"
-                          ? "bg-blue-600 text-white rounded-br-none"
-                          : "bg-white text-slate-800 border border-slate-200 rounded-bl-none shadow-sm"
-                      }`}
+                    <Streamdown>{msg.content}</Streamdown>
+                    {msg.role === "assistant" && msg.modelUsed && (
+                      <div className="flex items-center justify-between mt-2 text-xs opacity-70">
+                        <span>{msg.modelUsed}</span>
+                        <div className="flex gap-2">
+                          {msg.tokens && <span>{msg.tokens} টোকেন</span>}
+                          {msg.responseTime && <span>{msg.responseTime}ms</span>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {msg.role === "assistant" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyMessage(msg.content)}
+                      className="ml-2 h-auto p-1 text-slate-400 hover:text-slate-200"
                     >
-                      {msg.role === "assistant" ? (
-                        <Streamdown>{msg.content}</Streamdown>
-                      ) : (
-                        <p className="text-sm">{msg.content}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className={`flex gap-1 mt-2 ${msg.role === "user" ? "justify-end" : "justify-start"} opacity-0 group-hover:opacity-100 transition-opacity px-4`}>
-                    <button onClick={() => toast.success("👍 রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">👍</button>
-                    <button onClick={() => toast.success("❤️ রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">❤️</button>
-                    <button onClick={() => toast.success("😂 রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">😂</button>
-                    <button onClick={() => toast.success("😮 রিঅ্যাকশন যোগ করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">😮</button>
-                    <button onClick={() => toast.success("🔖 বুকমার্ক করা হয়েছে")} className="text-lg hover:scale-125 transition-transform">🔖</button>
-                  </div>
+                      <Copy size={14} />
+                    </Button>
+                  )}
                 </div>
               ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white text-slate-800 border border-slate-200 rounded-lg rounded-bl-none shadow-sm px-4 py-3">
-                    <div className="flex gap-2 items-center">
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                    </div>
-                  </div>
-                </div>
-              )}
             </>
           )}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
 
-      {/* Input Area */}
-      <div className="border-t border-slate-200 bg-white shadow-lg px-6 py-4">
-        <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex gap-3">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="বার্তা লিখুন... / Type a message..."
-            disabled={isLoading}
-            className="flex-1 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
-          />
-          <Button
-            type="button"
-            onClick={() => {
-              const fileInput = document.createElement('input');
-              fileInput.type = 'file';
-              fileInput.onchange = () => {
-                if (fileInput.files?.[0]) {
-                  toast.success('File: ' + fileInput.files[0].name + ' ready to share');
-                }
-              };
-              fileInput.click();
-            }}
-            variant="outline"
-            size="icon"
-            className="text-slate-600"
-          >
-            <Upload className="w-4 h-4" />
-          </Button>
-          <Button
-            type="button"
-            onClick={
-              isRecording ? handleStopRecording : handleStartRecording
-            }
-            variant="outline"
-            size="icon"
-            className={
-              isRecording
-                ? "bg-red-50 text-red-600 border-red-300"
-                : "text-slate-600"
-            }
-          >
-            {isRecording ? (
-              <MicOff className="w-4 h-4" />
-            ) : (
-              <Mic className="w-4 h-4" />
-            )}
-          </Button>
-          <Button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
+      {/* ইনপুট এরিয়া */}
+      <div className="border-t border-slate-700 bg-slate-800 px-6 py-4">
+        <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto space-y-3">
+          <div className="flex gap-2">
+            <Input
+              placeholder="আপনার বার্তা টাইপ করুন..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isLoading || aiLoading}
+              className="bg-slate-700 border-slate-600 text-slate-200"
+            />
+            <Button
+              type="submit"
+              disabled={isLoading || aiLoading || !input.trim()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isLoading || aiLoading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Send size={18} />
+              )}
+            </Button>
+          </div>
+
+          {!useAIModel && (
+            <Select value={personality} onValueChange={setPersonality}>
+              <SelectTrigger className="w-full bg-slate-700 border-slate-600 text-slate-200">
+                <SelectValue placeholder="ব্যক্তিত্ব নির্বাচন করুন" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectItem value="friendly" className="text-slate-200">বন্ধুত্বপূর্ণ</SelectItem>
+                <SelectItem value="professional" className="text-slate-200">পেশাদার</SelectItem>
+                <SelectItem value="teacher" className="text-slate-200">শিক্ষক</SelectItem>
+                <SelectItem value="creative" className="text-slate-200">সৃজনশীল</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </form>
       </div>
 
-      {/* Delete Dialog */}
+      {/* ডিলিট ডায়ালগ */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogTitle>কথোপকথন মুছুন?</AlertDialogTitle>
-          <AlertDialogDescription>
-            এই কথোপকথনটি চিরতরে মুছে ফেলা হবে এবং পুনরুদ্ধার করা যাবে না।
+        <AlertDialogContent className="bg-slate-800 border-slate-700">
+          <AlertDialogTitle className="text-white">কথোপকথন মুছুন?</AlertDialogTitle>
+          <AlertDialogDescription className="text-slate-400">
+            এই কথোপকথনটি চিরতরে মুছে ফেলা হবে।
           </AlertDialogDescription>
-          <div className="flex gap-3 justify-end">
-            <AlertDialogCancel>বাতিল করুন</AlertDialogCancel>
+          <div className="flex gap-2">
+            <AlertDialogCancel className="bg-slate-700 text-slate-200 border-slate-600">বাতিল করুন</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConversation}
               className="bg-red-600 hover:bg-red-700"

@@ -6,6 +6,7 @@ import {
   AIMessage,
   AIModel,
 } from "./aiModelIntegration";
+import { BestModelSelector } from "./bestModelSelector";
 
 /**
  * AI মডেল রুটার - tRPC ইন্টিগ্রেশন
@@ -15,6 +16,7 @@ import {
 // গ্লোবাল AI মডেল ম্যানেজার এবং পারফরম্যান্স ট্র্যাকার
 let aiModelManager: AIModelManager | null = null;
 const performanceTracker = new AIModelPerformanceTracker();
+let bestModelSelector: BestModelSelector | null = null;
 
 /**
  * AI মডেল ম্যানেজার ইনিশিয়ালাইজ করুন
@@ -257,6 +259,81 @@ export const aiModelsRouter = router({
       configured: models.includes(model),
       status: models.includes(model) ? 'ready' : 'not-configured'
     }));
+  }),
+
+  /**
+   * স্বয়ংক্রিয়ভাবে সেরা মডেল নির্বাচন করুন
+   */
+  selectBestModelAuto: publicProcedure
+    .input(
+      z.object({
+        prioritizeSpeed: z.boolean().optional(),
+        prioritizeAccuracy: z.boolean().optional(),
+        maxErrorRate: z.number().optional(),
+        maxResponseTime: z.number().optional()
+      })
+    )
+    .query(({ input }) => {
+      if (!bestModelSelector) {
+        bestModelSelector = new BestModelSelector(performanceTracker);
+      }
+
+      const result = bestModelSelector.selectBestModel({
+        prioritizeSpeed: input.prioritizeSpeed,
+        prioritizeAccuracy: input.prioritizeAccuracy,
+        maxErrorRate: input.maxErrorRate,
+        maxResponseTime: input.maxResponseTime
+      });
+
+      if (!result) {
+        return { model: 'chatgpt', reason: 'ডিফল্ট মডেল' };
+      }
+
+      return result;
+    }),
+
+  /**
+   * মডেল র‍্যাঙ্কিং পান
+   */
+  getModelRanking: publicProcedure.query(() => {
+    if (!bestModelSelector) {
+      bestModelSelector = new BestModelSelector(performanceTracker);
+    }
+
+    return bestModelSelector.getRanking();
+  }),
+
+  /**
+   * পারফরম্যান্স রিপোর্ট পান
+   */
+  getPerformanceReport: publicProcedure.query(() => {
+    if (!bestModelSelector) {
+      bestModelSelector = new BestModelSelector(performanceTracker);
+    }
+
+    return bestModelSelector.generateReport();
+  }),
+
+  /**
+   * দ্রুততম মডেল পান
+   */
+  getFastestModel: publicProcedure.query(() => {
+    if (!bestModelSelector) {
+      bestModelSelector = new BestModelSelector(performanceTracker);
+    }
+
+    return bestModelSelector.getFastestModel();
+  }),
+
+  /**
+   * সবচেয়ে নির্ভরযোগ্য মডেল পান
+   */
+  getMostReliableModel: publicProcedure.query(() => {
+    if (!bestModelSelector) {
+      bestModelSelector = new BestModelSelector(performanceTracker);
+    }
+
+    return bestModelSelector.getMostReliableModel();
   })
 });
 
