@@ -8,6 +8,8 @@ import { Loader2, Plus, MessageCircle, LogOut, Search, Moon, Sun, Smile, User, Z
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useTheme } from "@/contexts/ThemeContext";
+import { ConversationFilter, ConversationFilterOptions } from "@/components/ConversationFilter";
+import { useConversationFilter, useConversationModelStats } from "@/hooks/useConversationFilter";
 
 export default function Home() {
   const { user, loading, isAuthenticated, logout } = useAuth();
@@ -15,6 +17,12 @@ export default function Home() {
   const { theme, toggleTheme } = useTheme();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterOptions, setFilterOptions] = useState<ConversationFilterOptions>({
+    searchQuery: '',
+    model: 'all',
+    dateRange: 'all',
+    sortBy: 'recent'
+  });
   const { data: conversations, isLoading: conversationsLoading } =
     trpc.chat.listConversations.useQuery(undefined, {
       enabled: isAuthenticated,
@@ -24,7 +32,16 @@ export default function Home() {
     { enabled: isAuthenticated && searchQuery.length > 0 }
   );
 
-  const displayConversations = searchQuery.length > 0 ? searchResults : conversations;
+  // ফিল্টার হুক ব্যবহার করুন
+  const { filteredConversations, filteredCount, totalCount, hasFilters } = useConversationFilter(
+    conversations,
+    filterOptions
+  );
+
+  // মডেল স্ট্যাটিস্টিক্স
+  const modelStats = useConversationModelStats(conversations);
+
+  const displayConversations = filteredConversations;
 
   const createConversationMutation = trpc.chat.createConversation.useMutation();
 
@@ -168,23 +185,25 @@ export default function Home() {
             ))}
           </div>
           
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
-            <Input
-              placeholder="কথোপকথন খুঁজুন / Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
+          {/* Conversation Filter */}
+          <ConversationFilter
+            onFilterChange={setFilterOptions}
+            isLoading={conversationsLoading}
+          />
         </div>
 
         {/* Conversations Grid */}
         <div>
-          <h2 className="text-xl font-semibold text-slate-800 mb-4">
-            আপনার কথোপকথন
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-slate-800">
+              আপনার কথোপকথন
+            </h2>
+            {hasFilters && (
+              <p className="text-sm text-slate-500">
+                {filteredCount} / {totalCount} কথোপকথন
+              </p>
+            )}
+          </div>
 
           {conversationsLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -213,11 +232,11 @@ export default function Home() {
                       {conv.title}
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      {new Date(conv.createdAt).toLocaleDateString("bn-BD", {
+                      {conv.createdAt ? new Date(conv.createdAt).toLocaleDateString("bn-BD", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
-                      })}
+                      }) : 'N/A'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
