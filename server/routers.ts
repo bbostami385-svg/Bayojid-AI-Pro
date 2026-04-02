@@ -51,6 +51,7 @@ import { conversationMemoryRouter } from "./conversationMemory";
 import { sslcommerzPaymentRouter } from "./sslcommerzPaymentRouter";
 import { refundRouter } from "./refundRouter";
 import { invokeLLM } from "./_core/llm";
+import { aiModelsRouter } from "./aiModelsRouter";
 
 const personalityPrompts: Record<string, string> = {
   friendly: "You are a friendly and warm AI assistant. Be conversational and approachable.",
@@ -61,6 +62,7 @@ const personalityPrompts: Record<string, string> = {
 
 export const appRouter = router({
   system: systemRouter,
+  aiModels: aiModelsRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
