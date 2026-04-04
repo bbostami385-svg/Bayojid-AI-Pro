@@ -301,3 +301,112 @@ export const userSubscriptions = mysqlTable("userSubscriptions", {
 
 export type UserSubscription = typeof userSubscriptions.$inferSelect;
 export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
+
+/**
+ * Stripe Customers table - stores Stripe customer IDs for users
+ */
+export const stripeCustomers = mysqlTable("stripeCustomers", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 100 }).notNull().unique(),
+  email: varchar("email", { length: 320 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StripeCustomer = typeof stripeCustomers.$inferSelect;
+export type InsertStripeCustomer = typeof stripeCustomers.$inferInsert;
+
+/**
+ * Stripe Products table - stores Stripe product information
+ */
+export const stripeProducts = mysqlTable("stripeProducts", {
+  id: int("id").autoincrement().primaryKey(),
+  stripeProductId: varchar("stripeProductId", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  type: mysqlEnum("type", ["product", "subscription"]).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  metadata: json("metadata").$type<Record<string, string>>().default({}),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StripeProduct = typeof stripeProducts.$inferSelect;
+export type InsertStripeProduct = typeof stripeProducts.$inferInsert;
+
+/**
+ * Stripe Prices table - stores Stripe price information
+ */
+export const stripePrices = mysqlTable("stripePrices", {
+  id: int("id").autoincrement().primaryKey(),
+  stripePriceId: varchar("stripePriceId", { length: 100 }).notNull().unique(),
+  stripeProductId: varchar("stripeProductId", { length: 100 }).notNull(),
+  amount: int("amount").notNull(), // in cents
+  currency: varchar("currency", { length: 10 }).default("usd").notNull(),
+  billingCycle: mysqlEnum("billingCycle", ["one_time", "month", "year"]).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type StripePrice = typeof stripePrices.$inferSelect;
+export type InsertStripePrice = typeof stripePrices.$inferInsert;
+
+/**
+ * Stripe Payment Intents table - stores payment intent records
+ */
+export const stripePaymentIntents = mysqlTable("stripePaymentIntents", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 100 }).notNull().unique(),
+  amount: int("amount").notNull(), // in cents
+  currency: varchar("currency", { length: 10 }).default("usd").notNull(),
+  status: mysqlEnum("status", ["requires_payment_method", "requires_confirmation", "requires_action", "processing", "requires_capture", "canceled", "succeeded"]).notNull(),
+  metadata: json("metadata").$type<Record<string, string>>().default({}),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StripePaymentIntent = typeof stripePaymentIntents.$inferSelect;
+export type InsertStripePaymentIntent = typeof stripePaymentIntents.$inferInsert;
+
+/**
+ * Stripe Subscriptions table - stores Stripe subscription records
+ */
+export const stripeSubscriptions = mysqlTable("stripeSubscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 100 }).notNull().unique(),
+  stripePriceId: varchar("stripePriceId", { length: 100 }).notNull(),
+  status: mysqlEnum("status", ["trialing", "active", "past_due", "canceled", "unpaid", "incomplete", "incomplete_expired"]).notNull(),
+  currentPeriodStart: timestamp("currentPeriodStart"),
+  currentPeriodEnd: timestamp("currentPeriodEnd"),
+  cancelledAt: timestamp("cancelledAt"),
+  endedAt: timestamp("endedAt"),
+  metadata: json("metadata").$type<Record<string, string>>().default({}),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StripeSubscription = typeof stripeSubscriptions.$inferSelect;
+export type InsertStripeSubscription = typeof stripeSubscriptions.$inferInsert;
+
+/**
+ * Stripe Invoices table - stores Stripe invoice records
+ */
+export const stripeInvoices = mysqlTable("stripeInvoices", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stripeInvoiceId: varchar("stripeInvoiceId", { length: 100 }).notNull().unique(),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 100 }),
+  amount: int("amount").notNull(), // in cents
+  currency: varchar("currency", { length: 10 }).default("usd").notNull(),
+  status: mysqlEnum("status", ["draft", "open", "paid", "uncollectible", "void"]).notNull(),
+  pdfUrl: text("pdfUrl"),
+  hostedInvoiceUrl: text("hostedInvoiceUrl"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StripeInvoice = typeof stripeInvoices.$inferSelect;
+export type InsertStripeInvoice = typeof stripeInvoices.$inferInsert;

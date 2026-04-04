@@ -1,4 +1,5 @@
 import { z } from "zod";
+import Stripe from "stripe";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { systemRouter } from "./_core/systemRouter";
 import { COOKIE_NAME } from "@shared/const";
@@ -52,6 +53,7 @@ import { sslcommerzPaymentRouter } from "./sslcommerzPaymentRouter";
 import { refundRouter } from "./refundRouter";
 import { invokeLLM } from "./_core/llm";
 import { aiModelsRouter } from "./aiModelsRouter";
+import { stripeRouter } from "./stripeRouter";
 
 const personalityPrompts: Record<string, string> = {
   friendly: "You are a friendly and warm AI assistant. Be conversational and approachable.",
@@ -446,6 +448,7 @@ export const appRouter = router({
   sslcommerzPayment: sslcommerzPaymentRouter,
   refund: refundRouter,
   conversationMemory: conversationMemoryRouter,
+  stripe: stripeRouter,
 
   templates: router({
     create: protectedProcedure

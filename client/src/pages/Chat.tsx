@@ -12,6 +12,9 @@ import { Streamdown } from "streamdown";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useAIModels } from "@/hooks/useAIModels";
+import { ExportButton } from "@/components/ExportButton";
+import { VoiceButton } from "@/components/VoiceButton";
+import { ShareModal } from "@/components/ShareModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -240,14 +243,22 @@ export default function Chat() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleExportAsText}
-              className="text-blue-400 hover:text-blue-300 hover:bg-slate-700"
-            >
-              <Download className="w-4 h-4" />
-            </Button>
+            <ExportButton
+              conversationId={conversationId}
+              conversationTitle="চ্যাট"
+              messages={messages}
+              isLoading={isLoading || aiLoading}
+            />
+            <VoiceButton
+              onVoiceMessage={(blob) => {
+                toast.info("ভয়েস বার্তা প্রাপ্ত হয়েছে");
+              }}
+              disabled={isLoading || aiLoading}
+            />
+            <ShareModal
+              conversationId={conversationId}
+              conversationTitle="চ্যাট"
+            />
             <Button
               variant="ghost"
               size="sm"
@@ -374,6 +385,12 @@ export default function Chat() {
               onChange={(e) => setInput(e.target.value)}
               disabled={isLoading || aiLoading}
               className="bg-slate-700 border-slate-600 text-slate-200"
+            />
+            <VoiceButton
+              onVoiceMessage={(blob) => {
+                toast.info("ভয়েস বার্তা প্রাপ্ত হয়েছে");
+              }}
+              disabled={isLoading || aiLoading}
             />
             <Button
               type="submit"

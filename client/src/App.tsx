@@ -22,6 +22,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
 import PaymentHistory from "./pages/PaymentHistory";
 import ExportAnalytics from "./pages/ExportAnalytics";
+import SharedChat from "./pages/SharedChat";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/payment/failed" component={PaymentFailed} />
       <Route path="/payment/history" component={PaymentHistory} />
       <Route path="/export" component={ExportAnalytics} />
+      <Route path="/shared/:id" component={SharedChat} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
