@@ -54,6 +54,11 @@ import { refundRouter } from "./refundRouter";
 import { invokeLLM } from "./_core/llm";
 import { aiModelsRouter } from "./aiModelsRouter";
 import { stripeRouter } from "./stripeRouter";
+import { notificationDeliveryRouter } from "./notificationDeliveryRouter";
+import { reportSchedulingRouter } from "./reportSchedulingRouter";
+import { apiUsageAnalyticsRouter } from "./apiUsageAnalyticsRouter";
+import { auditLogRouter } from "./auditLogRouter";
+import { dashboardWidgetsRouter } from "./dashboardWidgetsRouter";
 
 const personalityPrompts: Record<string, string> = {
   friendly: "You are a friendly and warm AI assistant. Be conversational and approachable.",
@@ -449,6 +454,11 @@ export const appRouter = router({
   refund: refundRouter,
   conversationMemory: conversationMemoryRouter,
   stripe: stripeRouter,
+  notificationDelivery: notificationDeliveryRouter,
+  reportScheduling: reportSchedulingRouter,
+  apiUsageAnalytics: apiUsageAnalyticsRouter,
+  auditLog: auditLogRouter,
+  dashboardWidgets: dashboardWidgetsRouter,
 
   templates: router({
     create: protectedProcedure

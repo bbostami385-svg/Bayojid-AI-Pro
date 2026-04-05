@@ -410,3 +410,131 @@ export const stripeInvoices = mysqlTable("stripeInvoices", {
 
 export type StripeInvoice = typeof stripeInvoices.$inferSelect;
 export type InsertStripeInvoice = typeof stripeInvoices.$inferInsert;
+
+
+/**
+ * Notification Deliveries table - stores notification delivery records
+ */
+export const notificationDeliveries = mysqlTable("notificationDeliveries", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  notificationId: varchar("notificationId", { length: 100 }).notNull(),
+  channels: varchar("channels", { length: 255 }).notNull(), // comma-separated: email,push,sms,webhook
+  recipient: varchar("recipient", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  status: mysqlEnum("status", ["pending", "sent", "failed", "retrying", "bounced"]).default("pending").notNull(),
+  attempts: int("attempts").default(0).notNull(),
+  lastAttemptAt: timestamp("lastAttemptAt"),
+  metadata: json("metadata").$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type NotificationDelivery = typeof notificationDeliveries.$inferSelect;
+export type InsertNotificationDelivery = typeof notificationDeliveries.$inferInsert;
+
+/**
+ * Scheduled Reports table - stores scheduled report configurations
+ */
+export const scheduledReports = mysqlTable("scheduledReports", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  reportId: varchar("reportId", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  reportType: mysqlEnum("reportType", ["activity", "revenue", "performance", "team", "custom"]).notNull(),
+  frequency: mysqlEnum("frequency", ["once", "daily", "weekly", "monthly", "quarterly"]).notNull(),
+  recipients: json("recipients").$type<string[]>().default([]),
+  metrics: json("metrics").$type<string[]>().default([]),
+  filters: json("filters").$type<Record<string, unknown>>().default({}),
+  template: varchar("template", { length: 255 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  lastGeneratedAt: timestamp("lastGeneratedAt"),
+  nextScheduledAt: timestamp("nextScheduledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ScheduledReport = typeof scheduledReports.$inferSelect;
+export type InsertScheduledReport = typeof scheduledReports.$inferInsert;
+
+/**
+ * Report History table - stores generated reports
+ */
+export const reportHistory = mysqlTable("reportHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  reportId: varchar("reportId", { length: 100 }).notNull().references(() => scheduledReports.reportId, { onDelete: "cascade" }),
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+  data: json("data").$type<Record<string, unknown>>().default({}),
+  status: mysqlEnum("status", ["success", "failed", "partial"]).default("success").notNull(),
+  errorMessage: text("errorMessage"),
+});
+
+export type ReportHistory = typeof reportHistory.$inferSelect;
+export type InsertReportHistory = typeof reportHistory.$inferInsert;
+
+/**
+ * API Usage Metrics table - stores API usage analytics
+ */
+export const apiUsageMetrics = mysqlTable("apiUsageMetrics", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  endpoint: varchar("endpoint", { length: 255 }).notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  requests: int("requests").default(0).notNull(),
+  successfulRequests: int("successfulRequests").default(0).notNull(),
+  failedRequests: int("failedRequests").default(0).notNull(),
+  avgLatency: int("avgLatency").default(0).notNull(), // in milliseconds
+  minLatency: int("minLatency").default(0).notNull(),
+  maxLatency: int("maxLatency").default(0).notNull(),
+  errors: int("errors").default(0).notNull(),
+  timeouts: int("timeouts").default(0).notNull(),
+  throttled: int("throttled").default(0).notNull(),
+  bytes: bigint("bytes", { mode: "number" }).default(0).notNull(),
+  cost: decimal("cost", { precision: 10, scale: 4 }).default("0"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type APIUsageMetric = typeof apiUsageMetrics.$inferSelect;
+export type InsertAPIUsageMetric = typeof apiUsageMetrics.$inferInsert;
+
+/**
+ * Audit Logs table - stores user activity audit trail
+ */
+export const auditLogs = mysqlTable("auditLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  action: varchar("action", { length: 100 }).notNull(),
+  status: mysqlEnum("status", ["success", "failure", "partial", "pending"]).default("success").notNull(),
+  severity: mysqlEnum("severity", ["info", "warning", "critical"]).default("info").notNull(),
+  resourceType: varchar("resourceType", { length: 100 }).notNull(),
+  resourceId: varchar("resourceId", { length: 255 }).notNull(),
+  resourceName: varchar("resourceName", { length: 255 }),
+  details: json("details").$type<Record<string, unknown>>().default({}),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: text("userAgent"),
+  duration: int("duration"), // in milliseconds
+  errorMessage: text("errorMessage"),
+  changedFields: json("changedFields").$type<Record<string, { before: unknown; after: unknown }>>().default({}),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+/**
+ * Dashboard Layouts table - stores user dashboard configurations
+ */
+export const dashboardLayouts = mysqlTable("dashboardLayouts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  layoutId: varchar("layoutId", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  widgets: json("widgets").$type<any[]>().default([]),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DashboardLayout = typeof dashboardLayouts.$inferSelect;
+export type InsertDashboardLayout = typeof dashboardLayouts.$inferInsert;
