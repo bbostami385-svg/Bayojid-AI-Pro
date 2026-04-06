@@ -23,6 +23,11 @@ import PaymentFailed from "./pages/PaymentFailed";
 import PaymentHistory from "./pages/PaymentHistory";
 import ExportAnalytics from "./pages/ExportAnalytics";
 import SharedChat from "./pages/SharedChat";
+import { NotificationCenter } from "./components/NotificationCenter";
+import { ReportDashboard } from "./components/ReportDashboard";
+import { AnalyticsCharts } from "./components/AnalyticsCharts";
+import APIRateLimitingDashboard from "./pages/APIRateLimitingDashboard";
+import DashboardWidgets from "./pages/DashboardWidgets";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -47,6 +52,11 @@ function Router() {
       <Route path="/payment/history" component={PaymentHistory} />
       <Route path="/export" component={ExportAnalytics} />
       <Route path="/shared/:id" component={SharedChat} />
+      <Route path="/notifications-center" component={NotificationCenter} />
+      <Route path="/reports" component={ReportDashboard} />
+      <Route path="/analytics-charts" component={AnalyticsCharts} />
+      <Route path="/api-rate-limiting" component={APIRateLimitingDashboard} />
+      <Route path="/dashboard-widgets" component={DashboardWidgets} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

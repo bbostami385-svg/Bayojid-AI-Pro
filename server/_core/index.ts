@@ -11,6 +11,7 @@ import { initializeWebSocketServer } from "./websocket";
 import { handleSSLCommerzWebhook } from "../sslcommerzWebhook";
 import multer from "multer";
 import { transcribeAudio } from "./voiceTranscription";
+import webhookRouter from "../webhookEndpoints";
 import type { Request, Response } from "express";
 
 interface TranscriptionResult {
@@ -62,6 +63,9 @@ async function startServer() {
     }
     await handleSSLCommerzWebhook(req, res);
   });
+  
+  // Webhook endpoints for notification delivery
+  app.use("/api/webhooks", webhookRouter);
   
   // Voice transcription endpoint
   const upload = multer({ storage: multer.memoryStorage() });
@@ -123,6 +127,19 @@ async function startServer() {
       activeUsers: getActiveUsers(conversationId),
     });
   });
+  
+  console.log("[Server] Webhook endpoints mounted at /api/webhooks");
+  console.log("[Server] Available webhook endpoints:");
+  console.log("  GET  /api/webhooks/health");
+  console.log("  POST /api/webhooks/test");
+  console.log("  POST /api/webhooks/delivery-callback");
+  console.log("  POST /api/webhooks/retry/:notificationId");
+  console.log("  GET  /api/webhooks/status/:notificationId");
+  console.log("  GET  /api/webhooks/stats");
+  console.log("  GET  /api/webhooks/queue");
+  console.log("  GET  /api/webhooks/logs");
+  console.log("  GET  /api/webhooks/config");
+  console.log("  POST /api/webhooks/simulate-error");
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
