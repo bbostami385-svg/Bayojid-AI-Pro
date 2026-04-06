@@ -12,6 +12,7 @@ import { handleSSLCommerzWebhook } from "../sslcommerzWebhook";
 import multer from "multer";
 import { transcribeAudio } from "./voiceTranscription";
 import webhookRouter from "../webhookEndpoints";
+import { registerScheduledTasks, stopAllScheduledTasks } from "../jobScheduler";
 import type { Request, Response } from "express";
 
 interface TranscriptionResult {
@@ -45,6 +46,15 @@ async function startServer() {
   
   // Initialize WebSocket server for real-time collaboration
   initializeWebSocketServer(server);
+  
+  // Initialize background job scheduler
+  console.log("[Server] Initializing background job scheduler...");
+  try {
+    registerScheduledTasks();
+    console.log("[Server] Background job scheduler initialized successfully");
+  } catch (error) {
+    console.error("[Server] Failed to initialize scheduler:", error);
+  }
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -150,6 +160,25 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+  });
+  
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('[Server] SIGTERM signal received: closing HTTP server');
+    stopAllScheduledTasks();
+    server.close(() => {
+      console.log('[Server] HTTP server closed');
+      process.exit(0);
+    });
+  });
+  
+  process.on('SIGINT', () => {
+    console.log('[Server] SIGINT signal received: closing HTTP server');
+    stopAllScheduledTasks();
+    server.close(() => {
+      console.log('[Server] HTTP server closed');
+      process.exit(0);
+    });
   });
 }
 
