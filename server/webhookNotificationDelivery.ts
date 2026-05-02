@@ -502,3 +502,100 @@ export function bulkCreateDeliveryRecords(
 
   return results;
 }
+
+
+// ============================================================================
+// EXPORTED FUNCTIONS FOR tRPC ROUTERS (COMPATIBILITY LAYER)
+// ============================================================================
+
+/**
+ * Create a new notification (tRPC compatibility)
+ */
+export function createNotification(data: {
+  channels: string[];
+  recipient: string;
+  subject: string;
+  message: string;
+  metadata?: Record<string, any>;
+}): NotificationDeliveryRecord {
+  return createDeliveryRecord(
+    `notif_${Date.now()}`,
+    data.metadata?.userId || 0,
+    (data.channels[0] as DeliveryChannel) || 'email',
+    data.recipient,
+    data.message,
+    { subject: data.subject, metadata: data.metadata }
+  );
+}
+
+/**
+ * Get delivery status (tRPC compatibility)
+ */
+export function getDeliveryStatus(notificationId: string): NotificationDeliveryRecord | null {
+  return getDeliveryRecord(notificationId) || null;
+}
+
+/**
+ * Get user delivery queue (tRPC compatibility)
+ */
+export function getUserDeliveryQueue(userId: number): NotificationDeliveryRecord[] {
+  return getUserDeliveryRecords(userId);
+}
+
+/**
+ * Get delivery statistics (tRPC compatibility)
+ */
+export function getDeliveryStatistics(userId: number): {
+  total: number;
+  pending: number;
+  sent: number;
+  failed: number;
+  retrying: number;
+  byChannel: Record<DeliveryChannel, number>;
+} {
+  const userRecords = getUserDeliveryRecords(userId);
+  const stats = {
+    total: userRecords.length,
+    pending: 0,
+    sent: 0,
+    failed: 0,
+    retrying: 0,
+    byChannel: {
+      email: 0,
+      push: 0,
+      sms: 0,
+      webhook: 0,
+    },
+  };
+
+  for (const record of userRecords) {
+    switch (record.status) {
+      case 'pending':
+        stats.pending++;
+        break;
+      case 'sent':
+        stats.sent++;
+        break;
+      case 'failed':
+        stats.failed++;
+        break;
+      case 'retrying':
+        stats.retrying++;
+        break;
+    }
+    stats.byChannel[record.channel]++;
+  }
+
+  return stats;
+}
+
+/**
+ * Get delivery history (tRPC compatibility)
+ */
+export function getDeliveryHistory(
+  userId: number,
+  limit: number = 50,
+  offset: number = 0
+): NotificationDeliveryRecord[] {
+  return getUserDeliveryRecords(userId, { limit, offset });
+}
