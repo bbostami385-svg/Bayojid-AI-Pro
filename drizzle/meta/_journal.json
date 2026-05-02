@@ -78,6 +78,13 @@
       "when": 1775268177673,
       "tag": "0010_blushing_malice",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1777707416768,
+      "tag": "0011_amusing_master_chief",
+      "breakpoints": true
     }
   ]
 }
