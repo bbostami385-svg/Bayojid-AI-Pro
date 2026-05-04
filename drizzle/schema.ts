@@ -1,4 +1,7 @@
-import { int, mysqlTable, varchar, text, timestamp, mysqlEnum, decimal, json, boolean, bigint } from "drizzle-orm/mysql-core";
+import { int, mysqlTable, varchar, text, timestamp, mysqlEnum, decimal, json, boolean, bigint as drizzleBigint } from "drizzle-orm/mysql-core";
+
+// Explicitly export bigint to ensure it's available at runtime
+export const bigint = drizzleBigint;
 
 /**
  * Core user table backing auth flow.
