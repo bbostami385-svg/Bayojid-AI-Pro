@@ -481,3 +481,14 @@ function aggregateMetrics(metrics: APIUsageMetric[], granularity: TimeGranularit
 
   return Object.values(aggregated).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 }
+
+export function generateDailySummary() {
+  return {
+    date: new Date(),
+    totalRequests: 0,
+    successfulRequests: 0,
+    failedRequests: 0,
+    averageResponseTime: 0,
+    topEndpoints: [],
+  };
+}

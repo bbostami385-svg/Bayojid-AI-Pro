@@ -166,3 +166,34 @@ export function generateReport(data: {
   generatedReports.set(id, report);
   return report;
 }
+
+
+// Missing exports for routers and job scheduler
+export function getReportHistory(reportId: string, limit: number = 50): GeneratedReport[] {
+  const results: GeneratedReport[] = [];
+  for (const [, report] of generatedReports) {
+    if (report.scheduledReportId === reportId && results.length < limit) {
+      results.push(report);
+    }
+  }
+  return results;
+}
+
+export function getAvailableTemplates() {
+  return [
+    { id: 'activity', name: 'Activity Report', description: 'User activity summary' },
+    { id: 'revenue', name: 'Revenue Report', description: 'Revenue and sales metrics' },
+    { id: 'performance', name: 'Performance Report', description: 'System performance metrics' },
+    { id: 'team', name: 'Team Report', description: 'Team collaboration metrics' },
+  ];
+}
+
+export function getScheduledReportsByFrequency(frequency: string): ScheduledReport[] {
+  const results: ScheduledReport[] = [];
+  for (const [, report] of scheduledReports) {
+    if (report.frequency === frequency) {
+      results.push(report);
+    }
+  }
+  return results;
+}
