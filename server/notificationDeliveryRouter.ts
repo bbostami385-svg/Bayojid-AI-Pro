@@ -19,14 +19,13 @@ export const notificationDeliveryRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const notification = notificationService.createNotification(
-        ctx.user.id,
-        input.channels,
-        input.recipient,
-        input.subject,
-        input.message,
-        input.metadata
-      );
+      const notification = notificationService.createNotification({
+        channels: input.channels,
+        recipient: input.recipient,
+        subject: input.subject,
+        message: input.message,
+        metadata: { ...input.metadata, userId: ctx.user.id }
+      });
       return notification;
     }),
 
