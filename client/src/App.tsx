@@ -31,6 +31,7 @@ import DashboardWidgets from "./pages/DashboardWidgets";
 import { ThemeSwitcher } from "./components/ThemeSwitcher";
 import { LanguageSelector } from "./components/LanguageSelector";
 import { QuotaMonitor } from "./components/QuotaMonitor";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/analytics-charts" component={AnalyticsCharts} />
       <Route path="/api-rate-limiting" component={APIRateLimitingDashboard} />
       <Route path="/dashboard-widgets" component={DashboardWidgets} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
