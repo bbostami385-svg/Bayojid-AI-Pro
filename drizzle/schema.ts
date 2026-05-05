@@ -57,20 +57,6 @@ export const messages = mysqlTable("messages", {
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
 
-/**
- * Conversation Shares table - stores shared links for conversations
- */
-export const conversationShares = mysqlTable("conversationShares", {
-  id: int("id").autoincrement().primaryKey(),
-  conversationId: int("conversationId").notNull().references(() => conversations.id, { onDelete: "cascade" }),
-  shareToken: varchar("shareToken", { length: 64 }).notNull().unique(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  expiresAt: timestamp("expiresAt"),
-});
-
-export type ConversationShare = typeof conversationShares.$inferSelect;
-export type InsertConversationShare = typeof conversationShares.$inferInsert;
-
 
 /**
  * Premium Subscriptions table - stores user subscription information
@@ -541,3 +527,129 @@ export const dashboardLayouts = mysqlTable("dashboardLayouts", {
 
 export type DashboardLayout = typeof dashboardLayouts.$inferSelect;
 export type InsertDashboardLayout = typeof dashboardLayouts.$inferInsert;
+
+
+/**
+ * User Analytics table - stores user behavior and engagement metrics
+ */
+export const userAnalytics = mysqlTable("userAnalytics", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  totalSessions: int("totalSessions").default(0).notNull(),
+  totalMessages: int("totalMessages").default(0).notNull(),
+  totalConversations: int("totalConversations").default(0).notNull(),
+  averageSessionDuration: int("averageSessionDuration").default(0).notNull(),
+  lastActivityAt: timestamp("lastActivityAt"),
+  engagementScore: decimal("engagementScore", { precision: 5, scale: 2 }).default("0"),
+  userPattern: varchar("userPattern", { length: 50 }).default("new_user"),
+  churnRisk: boolean("churnRisk").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserAnalytic = typeof userAnalytics.$inferSelect;
+export type InsertUserAnalytic = typeof userAnalytics.$inferInsert;
+
+/**
+ * Prompt Templates table - stores reusable prompt templates
+ */
+export const promptTemplates = mysqlTable("promptTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  templateId: varchar("templateId", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }).default("general"),
+  template: text("template").notNull(),
+  variables: json("variables").$type<string[]>().default([]),
+  isPublic: boolean("isPublic").default(false).notNull(),
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
+  usageCount: int("usageCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PromptTemplate = typeof promptTemplates.$inferSelect;
+export type InsertPromptTemplate = typeof promptTemplates.$inferInsert;
+
+/**
+ * Conversation Shares table - stores shared conversations
+ */
+export const conversationShares = mysqlTable("conversationShares", {
+  id: int("id").autoincrement().primaryKey(),
+  shareId: varchar("shareId", { length: 100 }).notNull().unique(),
+  conversationId: int("conversationId").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  ownerId: int("ownerId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sharedWithUserId: int("sharedWithUserId").references(() => users.id, { onDelete: "cascade" }),
+  permission: varchar("permission", { length: 50 }).default("view"),
+  expiresAt: timestamp("expiresAt"),
+  accessCount: int("accessCount").default(0).notNull(),
+  isPublic: boolean("isPublic").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ConversationShare = typeof conversationShares.$inferSelect;
+export type InsertConversationShare = typeof conversationShares.$inferInsert;
+
+/**
+ * Search Index table - stores searchable conversation data
+ */
+export const searchIndex = mysqlTable("searchIndex", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  conversationId: int("conversationId").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  messageId: int("messageId").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  keywords: text("keywords"),
+  content: text("content"),
+  relevanceScore: decimal("relevanceScore", { precision: 3, scale: 2 }).default("0"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SearchIndex = typeof searchIndex.$inferSelect;
+export type InsertSearchIndex = typeof searchIndex.$inferInsert;
+
+/**
+ * User Quotas table - tracks API usage and quotas
+ */
+export const userQuotas = mysqlTable("userQuotas", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tier: varchar("tier", { length: 50 }).default("free"),
+  messagesUsed: int("messagesUsed").default(0).notNull(),
+  messagesLimit: int("messagesLimit").default(100).notNull(),
+  apiCallsUsed: int("apiCallsUsed").default(0).notNull(),
+  apiCallsLimit: int("apiCallsLimit").default(1000).notNull(),
+  exportsUsed: int("exportsUsed").default(0).notNull(),
+  exportsLimit: int("exportsLimit").default(10).notNull(),
+  storageUsed: bigint("storageUsed", { mode: "number" }).default(0).notNull(),
+  storageLimit: bigint("storageLimit", { mode: "number" }).default(1073741824).notNull(), // 1GB
+  collaborationsUsed: int("collaborationsUsed").default(0).notNull(),
+  collaborationsLimit: int("collaborationsLimit").default(0).notNull(),
+  resetDate: timestamp("resetDate"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserQuota = typeof userQuotas.$inferSelect;
+export type InsertUserQuota = typeof userQuotas.$inferInsert;
+
+/**
+ * User Preferences table - stores theme, language, and other preferences
+ */
+export const userPreferences = mysqlTable("userPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  theme: varchar("theme", { length: 50 }).default("auto"),
+  language: varchar("language", { length: 10 }).default("en"),
+  fontSize: varchar("fontSize", { length: 50 }).default("medium"),
+  borderRadius: varchar("borderRadius", { length: 50 }).default("medium"),
+  notifications: boolean("notifications").default(true).notNull(),
+  emailNotifications: boolean("emailNotifications").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserPreference = typeof userPreferences.$inferSelect;
+export type InsertUserPreference = typeof userPreferences.$inferInsert;
+
