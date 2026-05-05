@@ -28,6 +28,9 @@ import { ReportDashboard } from "./components/ReportDashboard";
 import { AnalyticsCharts } from "./components/AnalyticsCharts";
 import APIRateLimitingDashboard from "./pages/APIRateLimitingDashboard";
 import DashboardWidgets from "./pages/DashboardWidgets";
+import { ThemeSwitcher } from "./components/ThemeSwitcher";
+import { LanguageSelector } from "./components/LanguageSelector";
+import { QuotaMonitor } from "./components/QuotaMonitor";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -75,7 +78,18 @@ function App() {
       >
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <div className="flex flex-col min-h-screen">
+            {/* Header with Theme, Language, and Quota Switchers */}
+            <div className="flex justify-end gap-4 p-4 bg-background border-b">
+              <ThemeSwitcher />
+              <LanguageSelector />
+              <QuotaMonitor />
+            </div>
+            {/* Main content */}
+            <div className="flex-1">
+              <Router />
+            </div>
+          </div>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
