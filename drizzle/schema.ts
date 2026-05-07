@@ -653,3 +653,100 @@ export const userPreferences = mysqlTable("userPreferences", {
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type InsertUserPreference = typeof userPreferences.$inferInsert;
 
+
+
+/**
+ * AI Model Usage Analytics table - stores all model usage records
+ */
+export const aiModelUsage = mysqlTable("aiModelUsage", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  model: varchar("model", { length: 50 }).notNull(), // chatgpt, gemini, claude, perplexity, grok
+  prompt: text("prompt"),
+  response: text("response"),
+  tokensUsed: int("tokensUsed").default(0).notNull(),
+  responseTime: int("responseTime").default(0).notNull(), // in ms
+  cost: decimal("cost", { precision: 10, scale: 6 }).default("0").notNull(),
+  success: boolean("success").default(true).notNull(),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  index: index("idx_userId_model").on("userId", "model"),
+  index2: index("idx_model_createdAt").on("model", "createdAt"),
+});
+
+export type AIModelUsage = typeof aiModelUsage.$inferSelect;
+export type InsertAIModelUsage = typeof aiModelUsage.$inferInsert;
+
+/**
+ * Model Statistics table - aggregated stats for each model
+ */
+export const modelStatistics = mysqlTable("modelStatistics", {
+  id: int("id").autoincrement().primaryKey(),
+  model: varchar("model", { length: 50 }).notNull().unique(),
+  totalRequests: int("totalRequests").default(0).notNull(),
+  totalTokens: int("totalTokens").default(0).notNull(),
+  totalCost: decimal("totalCost", { precision: 15, scale: 6 }).default("0").notNull(),
+  averageResponseTime: int("averageResponseTime").default(0).notNull(),
+  successRate: decimal("successRate", { precision: 5, scale: 2 }).default("100").notNull(),
+  lastUsed: timestamp("lastUsed").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ModelStatistics = typeof modelStatistics.$inferSelect;
+export type InsertModelStatistics = typeof modelStatistics.$inferInsert;
+
+/**
+ * User Model Preferences table - tracks user's model preferences
+ */
+export const userModelPreferences = mysqlTable("userModelPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  model: varchar("model", { length: 50 }).notNull(),
+  usageCount: int("usageCount").default(0).notNull(),
+  totalCost: decimal("totalCost", { precision: 15, scale: 6 }).default("0").notNull(),
+  lastUsed: timestamp("lastUsed").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  unique: unique().on("userId", "model"),
+  index: index("idx_userId_model_pref").on("userId", "model"),
+});
+
+export type UserModelPreference = typeof userModelPreferences.$inferSelect;
+export type InsertUserModelPreference = typeof userModelPreferences.$inferInsert;
+
+/**
+ * Daily Model Usage Trend table - tracks daily usage trends
+ */
+export const dailyModelTrend = mysqlTable("dailyModelTrend", {
+  id: int("id").autoincrement().primaryKey(),
+  model: varchar("model", { length: 50 }).notNull(),
+  date: date("date").notNull(),
+  requestCount: int("requestCount").default(0).notNull(),
+  totalTokens: int("totalTokens").default(0).notNull(),
+  totalCost: decimal("totalCost", { precision: 15, scale: 6 }).default("0").notNull(),
+  averageResponseTime: int("averageResponseTime").default(0).notNull(),
+  successCount: int("successCount").default(0).notNull(),
+  errorCount: int("errorCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  unique: unique().on("model", "date"),
+  index: index("idx_model_date").on("model", "date"),
+});
+
+export type DailyModelTrend = typeof dailyModelTrend.$inferSelect;
+export type InsertDailyModelTrend = typeof dailyModelTrend.$inferInsert;
+
+/**
+ * Model Cost Analysis table - detailed cost breakdown
+ */
+export const modelCostAnalysis = mysqlTable("modelCostAnalysis", {
+  id: int("id").autoincrement().primaryKey(),
+  model: varchar("model", { length: 50 }).notNull(),
+  costPer1kTokens: decimal("costPer1kTokens", { precision: 10, scale: 6 }).notNull(),
+  totalTokensUsed: int("totalTokensUsed").default(0).notNull(),
+  totalCost: decimal("totalCost", { precision: 15, scale: 6 }).default("0").notNull(),
+  costEfficiency: decimal("costEfficiency", { precision: 5, scale: 2 }).default("0"), // tokens per dollar
+  lastUpdated: timestamp("lastUpdated").defaultNow().onUpdateNow().notNull(),
+  index: index("idx_model_cost").on("model"),
+});
+
+export type ModelCostAnalysis = typeof modelCostAnalysis.$inferSelect;
+export type InsertModelCostAnalysis = typeof modelCostAnalysis.$inferInsert;

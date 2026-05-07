@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Users, TrendingUp, AlertTriangle, Activity, Settings, Download } from 'lucide-react';
+import { Users, TrendingUp, AlertTriangle, Activity, Settings, Download, Zap } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { AIAnalyticsDashboard } from '@/components/AIAnalyticsDashboard';
+import { AnalyticsCharts } from '@/components/AnalyticsCharts';
 // import { useAuth } from '@/hooks/useAuth';
 const useAuth = () => ({ user: { role: 'admin', id: 1 } });
 
