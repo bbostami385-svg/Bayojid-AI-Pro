@@ -754,3 +754,24 @@ export type InsertModelCostAnalysis = typeof modelCostAnalysis.$inferInsert;
 
 
 
+/**
+ * User Usage Stats table - tracks usage of features per user per month
+ */
+export const userUsageStats = mysqlTable("userUsageStats", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tier: mysqlEnum("tier", ["free", "starter", "pro", "enterprise"]).default("free").notNull(),
+  videoEditingMinutesThisMonth: int("videoEditingMinutesThisMonth").default(0).notNull(),
+  imageGenerationThisMonth: int("imageGenerationThisMonth").default(0).notNull(),
+  totalCreditsUsed: int("totalCreditsUsed").default(0).notNull(),
+  lastResetDate: timestamp("lastResetDate").defaultNow().notNull(),
+  lastActivityDate: timestamp("lastActivityDate").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  unique: unique().on("userId"),
+  idxUserId: index("idx_userId_usage").on("userId"),
+  idxTier: index("idx_tier_usage").on("tier"),
+});
+
+export type UserUsageStats = typeof userUsageStats.$inferSelect;
+export type InsertUserUsageStats = typeof userUsageStats.$inferInsert;
