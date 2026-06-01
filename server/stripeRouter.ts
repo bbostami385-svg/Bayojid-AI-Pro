@@ -38,9 +38,13 @@ export const stripeRouter = router({
         if (!db) throw new Error("Database not available");
 
         // Check if customer already exists
-        const existingCustomer = await db.query.stripeCustomers.findFirst({
-          where: eq(stripeCustomers.userId, ctx.user.id),
-        } as any);
+        const existingResult = await db
+          .select()
+          .from(stripeCustomers)
+          .where(eq(stripeCustomers.userId, ctx.user.id))
+          .limit(1);
+
+        const existingCustomer = existingResult.length > 0 ? existingResult[0] : null;
 
         if (existingCustomer) {
           return { success: true, customerId: existingCustomer.stripeCustomerId };
@@ -87,9 +91,13 @@ export const stripeRouter = router({
         if (!db) throw new Error("Database not available");
 
         // Get or create Stripe customer
-        let customer = await db.query.stripeCustomers.findFirst({
-          where: eq(stripeCustomers.userId, ctx.user.id),
-        } as any);
+        const customerResult = await db
+          .select()
+          .from(stripeCustomers)
+          .where(eq(stripeCustomers.userId, ctx.user.id))
+          .limit(1);
+
+        let customer = customerResult.length > 0 ? customerResult[0] : null;
 
         if (!customer) {
           const stripeCustomer = await stripe.customers.create({
@@ -161,9 +169,13 @@ export const stripeRouter = router({
         if (!db) throw new Error("Database not available");
 
         // Get or create Stripe customer
-        let customer = await db.query.stripeCustomers.findFirst({
-          where: eq(stripeCustomers.userId, ctx.user.id),
-        } as any);
+        const customerResult = await db
+          .select()
+          .from(stripeCustomers)
+          .where(eq(stripeCustomers.userId, ctx.user.id))
+          .limit(1);
+
+        let customer = customerResult.length > 0 ? customerResult[0] : null;
 
         if (!customer) {
           const stripeCustomer = await stripe.customers.create({
@@ -226,9 +238,10 @@ export const stripeRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const invoices = await db.query.stripeInvoices.findMany({
-        where: eq(stripeInvoices.userId, ctx.user.id),
-      } as any);
+      const invoices = await db
+        .select()
+        .from(stripeInvoices)
+        .where(eq(stripeInvoices.userId, ctx.user.id));
 
       return {
         success: true,
@@ -256,9 +269,10 @@ export const stripeRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const subscriptions = await db.query.stripeSubscriptions.findMany({
-        where: eq(stripeSubscriptions.userId, ctx.user.id),
-      } as any);
+      const subscriptions = await db
+        .select()
+        .from(stripeSubscriptions)
+        .where(eq(stripeSubscriptions.userId, ctx.user.id));
 
       return {
         success: true,
@@ -292,12 +306,18 @@ export const stripeRouter = router({
         if (!db) throw new Error("Database not available");
 
         // Verify subscription belongs to user
-        const subscription = await db.query.stripeSubscriptions.findFirst({
-          where: and(
-            eq(stripeSubscriptions.userId, ctx.user.id),
-            eq(stripeSubscriptions.stripeSubscriptionId, input.subscriptionId)
-          ),
-        } as any);
+        const subscriptionResult = await db
+          .select()
+          .from(stripeSubscriptions)
+          .where(
+            and(
+              eq(stripeSubscriptions.userId, ctx.user.id),
+              eq(stripeSubscriptions.stripeSubscriptionId, input.subscriptionId)
+            )
+          )
+          .limit(1);
+
+        const subscription = subscriptionResult.length > 0 ? subscriptionResult[0] : null;
 
         if (!subscription) {
           throw new Error("Subscription not found");
@@ -332,13 +352,15 @@ export const stripeRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const products = await db.query.stripeProducts.findMany({
-        where: eq(stripeProducts.isActive, true),
-      } as any);
+      const products = await db
+        .select()
+        .from(stripeProducts)
+        .where(eq(stripeProducts.isActive, true));
 
-      const prices = await db.query.stripePrices.findMany({
-        where: eq(stripePrices.isActive, true),
-      } as any);
+      const prices = await db
+        .select()
+        .from(stripePrices)
+        .where(eq(stripePrices.isActive, true));
 
       return {
         success: true,

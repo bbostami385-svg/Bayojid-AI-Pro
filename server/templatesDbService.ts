@@ -3,7 +3,7 @@
  * Migrates prompt templates and conversation shares from in-memory to Drizzle ORM
  */
 
-import { db } from "./db";
+import { getDb } from "./db";
 import { promptTemplates, conversationShares } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -26,6 +26,9 @@ export interface TemplateData {
  */
 export async function savePromptTemplate(data: TemplateData) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     const existing = await db
       .select()
       .from(promptTemplates)
@@ -72,6 +75,9 @@ export async function savePromptTemplate(data: TemplateData) {
  */
 export async function getUserTemplates(userId: number) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     const results = await db
       .select()
       .from(promptTemplates)
@@ -89,6 +95,9 @@ export async function getUserTemplates(userId: number) {
  */
 export async function getPublicTemplates(limit: number = 50) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     const results = await db
       .select()
       .from(promptTemplates)
@@ -107,6 +116,9 @@ export async function getPublicTemplates(limit: number = 50) {
  */
 export async function deletePromptTemplate(templateId: string) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     await db
       .delete(promptTemplates)
       .where(eq(promptTemplates.templateId, templateId));
@@ -123,6 +135,9 @@ export async function deletePromptTemplate(templateId: string) {
  */
 export async function incrementTemplateUsage(templateId: string) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     const template = await db
       .select()
       .from(promptTemplates)
@@ -163,6 +178,9 @@ export interface ShareData {
  */
 export async function saveConversationShare(data: ShareData) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     const existing = await db
       .select()
       .from(conversationShares)
@@ -203,6 +221,9 @@ export async function saveConversationShare(data: ShareData) {
  */
 export async function getConversationShares(conversationId: number) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     const results = await db
       .select()
       .from(conversationShares)
@@ -220,6 +241,9 @@ export async function getConversationShares(conversationId: number) {
  */
 export async function getSharedWithUser(userId: number) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     const results = await db
       .select()
       .from(conversationShares)
@@ -237,6 +261,9 @@ export async function getSharedWithUser(userId: number) {
  */
 export async function getPublicShares(limit: number = 50) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     const results = await db
       .select()
       .from(conversationShares)
@@ -255,6 +282,9 @@ export async function getPublicShares(limit: number = 50) {
  */
 export async function deleteConversationShare(shareId: string) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     await db
       .delete(conversationShares)
       .where(eq(conversationShares.shareId, shareId));
@@ -271,6 +301,9 @@ export async function deleteConversationShare(shareId: string) {
  */
 export async function incrementShareAccess(shareId: string) {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     const share = await db
       .select()
       .from(conversationShares)
@@ -299,6 +332,9 @@ export async function incrementShareAccess(shareId: string) {
  */
 export async function isShareExpired(shareId: string): Promise<boolean> {
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     const share = await db
       .select()
       .from(conversationShares)
