@@ -44,7 +44,7 @@ export const reportSchedulingRouter = router({
   getReportDetails: protectedProcedure
     .input(z.object({ reportId: z.string() }))
     .query(async ({ input }) => {
-      const report = reportService.getScheduledReport(input.reportId);
+      const report = reportService.getScheduledReport(input.reportId) || reportService.getReportHistory(input.reportId, 1)[0];
       return report;
     }),
 

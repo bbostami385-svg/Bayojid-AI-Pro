@@ -4,7 +4,14 @@
 
 import { z } from "zod";
 import { protectedProcedure, router } from "./_core/trpc";
-import * as notificationService from "./webhookNotificationDelivery";
+import * as webhookDelivery from "./webhookNotificationDelivery";
+
+// Create service object with all functions
+const notificationService = {
+  getDeliveryHistory: webhookDelivery.getDeliveryHistory,
+  getScheduledReport: webhookDelivery.getDeliveryRecord,
+  ...webhookDelivery
+};
 
 export const notificationDeliveryRouter = router({
   // Create notification
@@ -66,7 +73,7 @@ export const notificationDeliveryRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const history = notificationService.getDeliveryHistory(ctx.user.id, input.limit, input.offset);
+      const history = webhookDelivery.getDeliveryHistory(ctx.user.id, input.limit, input.offset);
       return history;
     }),
 
