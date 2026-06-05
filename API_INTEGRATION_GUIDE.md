@@ -8,15 +8,18 @@ This guide explains how to integrate external AI models and payment gateways int
 
 ### Supported Models
 
-| Model | Provider | Status | Environment Variable |
-|-------|----------|--------|----------------------|
-| GPT-4 | OpenAI | Ready | `OPENAI_API_KEY` |
-| GPT-5 | OpenAI | Ready | `GPT5_API_KEY` |
-| Claude Mythos | Anthropic | Ready | `CLAUDE_MYTHOS_API_KEY` |
-| Grok | xAI | Ready | `GROK_API_KEY` |
-| Gemini 3 | Google | Ready | `GEMINI_API_KEY` |
-| Perplexity | Perplexity AI | Ready | `PERPLEXITY_API_KEY` |
-| Manus AI | Manus | Pre-configured | `BUILT_IN_FORGE_API_KEY` |
+| Model | Provider | Tier | Status | Environment Variable |
+|-------|----------|------|--------|----------------------|
+| GPT-4 | OpenAI | Premium | Ready | `OPENAI_API_KEY` |
+| GPT-5 | OpenAI | Premium | Ready | `GPT5_API_KEY` |
+| Claude Mythos | Anthropic | Premium | Ready | `CLAUDE_MYTHOS_API_KEY` |
+| Grok | xAI | Premium | Ready | `GROK_API_KEY` |
+| Gemini 3 | Google | Premium | Ready | `GEMINI_API_KEY` |
+| Perplexity | Perplexity AI | Premium | Ready | `PERPLEXITY_API_KEY` |
+| **GPT-5 Mini** | OpenAI | **Free** | **Ready** | `GPT5_MINI_API_KEY` |
+| **Gemini Flash** | Google | **Free** | **Ready** | `GEMINI_FLASH_API_KEY` |
+| **DeepSeek** | DeepSeek | **Free** | **Ready** | `DEEPSEEK_API_KEY` |
+| Manus AI | Manus | Free | Pre-configured | `BUILT_IN_FORGE_API_KEY` |
 
 ### How to Add AI Model API Keys
 

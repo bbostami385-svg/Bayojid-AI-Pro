@@ -98,6 +98,39 @@ export const AI_MODELS_CONFIG: Record<string, AIModelConfig> = {
     maxTokens: 8000,
     costPerMillion: 5,
   },
+  "gpt-5-mini": {
+    id: "gpt-5-mini",
+    name: "GPT-5 Mini",
+    provider: "OpenAI",
+    envKey: "GPT5_MINI_API_KEY",
+    apiEndpoint: "https://api.openai.com/v1",
+    isConfigured: !!process.env.GPT5_MINI_API_KEY,
+    capabilities: ["text", "code", "reasoning"],
+    maxTokens: 4096,
+    costPerMillion: 5,
+  },
+  "gemini-flash": {
+    id: "gemini-flash",
+    name: "Gemini Flash",
+    provider: "Google",
+    envKey: "GEMINI_FLASH_API_KEY",
+    apiEndpoint: "https://generativelanguage.googleapis.com/v1beta",
+    isConfigured: !!process.env.GEMINI_FLASH_API_KEY,
+    capabilities: ["text", "vision", "fast"],
+    maxTokens: 8000,
+    costPerMillion: 3,
+  },
+  "deepseek": {
+    id: "deepseek",
+    name: "DeepSeek",
+    provider: "DeepSeek",
+    envKey: "DEEPSEEK_API_KEY",
+    apiEndpoint: "https://api.deepseek.com/v1",
+    isConfigured: !!process.env.DEEPSEEK_API_KEY,
+    capabilities: ["text", "code", "reasoning", "math"],
+    maxTokens: 4096,
+    costPerMillion: 2,
+  },
 };
 
 /**
@@ -185,14 +218,15 @@ export async function callAIModel(
  */
 export function getModelRecommendations(useCase: string): AIModelConfig[] {
   const recommendations: Record<string, string[]> = {
-    writing: ["claude-mythos", "gpt-5", "gpt-4"],
-    coding: ["gpt-5", "gpt-4", "claude-mythos"],
+    writing: ["claude-mythos", "gpt-5", "gpt-5-mini"],
+    coding: ["gpt-5", "gpt-5-mini", "deepseek"],
     analysis: ["gpt-5", "claude-mythos", "perplexity"],
     creative: ["gpt-4", "claude-mythos", "grok"],
     research: ["perplexity", "gpt-5", "claude-mythos"],
-    realtime: ["grok", "perplexity", "gemini-3"],
-    multimodal: ["gemini-3", "gpt-4", "claude-mythos"],
-    default: ["manus-ai", "gpt-4", "claude-mythos"],
+    realtime: ["gemini-flash", "grok", "perplexity"],
+    multimodal: ["gemini-3", "gemini-flash", "gpt-4"],
+    free: ["gemini-flash", "gpt-5-mini", "deepseek", "manus-ai"],
+    default: ["manus-ai", "gpt-5-mini", "gemini-flash"],
   };
 
   const recommendedIds = recommendations[useCase] || recommendations.default;
