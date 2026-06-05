@@ -94,7 +94,7 @@ const AI_MODELS: AIModel[] = [
   },
   {
     id: "gemini",
-    name: "Gemini",
+    name: "Gemini 3",
     provider: "Google",
     logo: "🎨",
     emoji: "🎨",
@@ -105,6 +105,8 @@ const AI_MODELS: AIModel[] = [
     costPerRequest: 0.02,
     isAvailable: true,
     isPremium: true,
+    isFree: false,
+    tier: "premium",
     latency: 1600,
     successRate: 94,
     features: ["Image Understanding", "Video Analysis", "Multimodal"],
@@ -122,9 +124,11 @@ const AI_MODELS: AIModel[] = [
     costPerRequest: 0.01,
     isAvailable: true,
     isPremium: false,
+    isFree: true,
+    tier: "free",
     latency: 800,
     successRate: 93,
-    features: ["Custom Models", "Lowest Cost", "Fastest Response"],
+    features: ["Custom Models", "Always Free", "Fastest Response"],
   },
 ];
 
@@ -296,12 +300,20 @@ export default function AIModelSelector() {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="text-5xl">{model.emoji}</div>
-                  {model.isPremium && (
-                    <Badge className="bg-yellow-600/20 text-yellow-300 border-yellow-500/30">
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      Premium
-                    </Badge>
-                  )}
+                  <div className="flex gap-2 flex-wrap justify-end">
+                    {model.isFree && (
+                      <Badge className="bg-green-600/20 text-green-300 border-green-500/30">
+                        <Zap className="w-3 h-3 mr-1" />
+                        Free
+                      </Badge>
+                    )}
+                    {model.isPremium && (
+                      <Badge className="bg-yellow-600/20 text-yellow-300 border-yellow-500/30">
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Premium
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <CardTitle className="text-white mt-2">{model.name}</CardTitle>
                 <CardDescription className="text-purple-300">{model.provider}</CardDescription>
@@ -342,6 +354,18 @@ export default function AIModelSelector() {
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-purple-300">Cost</span>
                     <span className="text-xs text-white font-semibold">${model.costPerRequest}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-purple-300">Tier</span>
+                    <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                      model.tier === 'free' ? 'bg-green-600/20 text-green-300' :
+                      model.tier === 'starter' ? 'bg-blue-600/20 text-blue-300' :
+                      model.tier === 'premium' ? 'bg-yellow-600/20 text-yellow-300' :
+                      'bg-purple-600/20 text-purple-300'
+                    }`}>
+                      {model.tier.charAt(0).toUpperCase() + model.tier.slice(1)}
+                    </span>
                   </div>
                 </div>
 
