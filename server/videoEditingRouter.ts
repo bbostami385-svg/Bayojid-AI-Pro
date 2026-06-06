@@ -59,14 +59,14 @@ export const videoEditingRouter = router({
         const canEdit = canPerformAction(
           userTier,
           "video_edit",
-          currentUsage,
-          input.durationMinutes
+          currentUsage as number,
+          input.durationMinutes as number
         );
 
         const remaining = getRemainingUsage(
           userTier,
           "video_edit",
-          currentUsage
+          currentUsage as number
         );
 
         return {
@@ -113,8 +113,8 @@ export const videoEditingRouter = router({
         const canEdit = canPerformAction(
           userTier,
           "video_edit",
-          currentUsage,
-          durationMinutes
+          currentUsage as number,
+          durationMinutes as number
         );
 
         if (!canEdit.allowed) {
@@ -162,8 +162,8 @@ export const videoEditingRouter = router({
           durationMinutes,
           quality: input.quality,
           format: input.outputFormat,
-          estimatedCredits: Math.ceil(durationMinutes * 0.5), // 0.5 credits per minute
-          message: `Video editing session started. You have ${getRemainingUsage(userTier, "video_edit", currentUsage)} minutes remaining this month.`,
+          estimatedCredits: Math.ceil((durationMinutes as number) * 0.5), // 0.5 credits per minute
+          message: `Video editing session started. You have ${getRemainingUsage(userTier, "video_edit", currentUsage as number)} minutes remaining this month.`,
         };
       } catch (error) {
         console.error("Error starting video editing:", error);
@@ -215,11 +215,11 @@ export const videoEditingRouter = router({
             .update(userUsageStats)
             .set({
               videoEditingMinutesThisMonth:
-                (usage.videoEditingMinutesThisMonth || 0) +
-                input.actualDurationMinutes,
+                ((usage.videoEditingMinutesThisMonth || 0) as number) +
+                (input.actualDurationMinutes as number),
               totalCreditsUsed:
-                (usage.totalCreditsUsed || 0) +
-                Math.ceil(input.actualDurationMinutes * 0.5),
+                ((usage.totalCreditsUsed || 0) as number) +
+                Math.ceil((input.actualDurationMinutes as number) * 0.5),
               lastActivityDate: new Date(),
             })
             .where(eq(userUsageStats.userId, ctx.user.id));
@@ -256,8 +256,8 @@ export const videoEditingRouter = router({
       const currentUsage = usage?.videoEditingMinutesThisMonth || 0;
 
       const limits = getTierLimits(userTier);
-      const remaining = getRemainingUsage(userTier, "video_edit", currentUsage);
-      const usagePercentage = (currentUsage / limits.videoEditingMinutesPerMonth) * 100;
+      const remaining = getRemainingUsage(userTier, "video_edit", currentUsage as number);
+      const usagePercentage = ((currentUsage as number) / ((limits?.videoEditingMinutesPerMonth || 1) as number)) * 100;
 
       return {
         tier: userTier,
@@ -296,7 +296,7 @@ export const videoEditingRouter = router({
         const currentUsage = usage?.videoEditingMinutesThisMonth || 0;
 
         const limits = getTierLimits(userTier);
-        const usagePercentage = (currentUsage / limits.videoEditingMinutesPerMonth) * 100;
+        const usagePercentage = ((currentUsage as number) / ((limits?.videoEditingMinutesPerMonth || 1) as number)) * 100;
 
         // Recommend upgrade if at 80% usage
         if (usagePercentage >= 80) {
@@ -314,9 +314,9 @@ export const videoEditingRouter = router({
             shouldUpgrade: true,
             reason: `You've used ${Math.round(usagePercentage)}% of your monthly video editing quota`,
             currentTier: userTier,
-            currentLimit: limits.videoEditingMinutesPerMonth,
+            currentLimit: (limits?.videoEditingMinutesPerMonth || 0) as number,
             recommendedTier,
-            recommendedLimit: recommendedLimits.videoEditingMinutesPerMonth,
+            recommendedLimit: (recommendedLimits?.videoEditingMinutesPerMonth || 0) as number,
             usagePercentage: Math.round(usagePercentage),
           };
         }
@@ -325,8 +325,8 @@ export const videoEditingRouter = router({
           shouldUpgrade: false,
           usagePercentage: Math.round(usagePercentage),
           currentTier: userTier,
-          currentLimit: limits.videoEditingMinutesPerMonth,
-          remaining: limits.videoEditingMinutesPerMonth - currentUsage,
+          currentLimit: (limits?.videoEditingMinutesPerMonth || 0) as number,
+          remaining: ((limits?.videoEditingMinutesPerMonth || 0) as number) - (currentUsage as number),
         };
       } catch (error) {
         console.error("Error getting upgrade recommendation:", error);
