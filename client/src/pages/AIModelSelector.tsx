@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,49 +14,120 @@ interface AIModel {
   description: string;
   capabilities: string[];
   speed: "fast" | "medium" | "slow";
-  accuracy: number; // 0-100
+  accuracy: number;
   costPerRequest: number;
   isAvailable: boolean;
   isPremium: boolean;
-  latency: number; // ms
-  successRate: number; // 0-100
+  isFree: boolean;
+  tier: "free" | "starter" | "premium" | "enterprise";
+  latency: number;
+  successRate: number;
   features: string[];
+  useCase?: string;
 }
 
 const AI_MODELS: AIModel[] = [
+  // FREE TIER MODELS
   {
-    id: "gpt-4",
-    name: "GPT-4",
+    id: "gemini-flash",
+    name: "Gemini Flash",
+    provider: "Google",
+    logo: "🎨",
+    emoji: "🎨",
+    description: "Fast and efficient AI for everyday tasks",
+    useCase: "Default AI",
+    capabilities: ["Text Generation", "Quick Responses", "General Tasks"],
+    speed: "fast",
+    accuracy: 88,
+    costPerRequest: 0,
+    isAvailable: true,
+    isPremium: false,
+    isFree: true,
+    tier: "free",
+    latency: 800,
+    successRate: 92,
+    features: ["Fast Response", "Reliable", "Always Available"],
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    provider: "DeepSeek",
+    logo: "🔍",
+    emoji: "🔍",
+    description: "Smart conversational AI for natural discussions",
+    useCase: "Smart Chat",
+    capabilities: ["Conversation", "Context Understanding", "Natural Language"],
+    speed: "fast",
+    accuracy: 89,
+    costPerRequest: 0,
+    isAvailable: true,
+    isPremium: false,
+    isFree: true,
+    tier: "free",
+    latency: 900,
+    successRate: 91,
+    features: ["Natural Chat", "Context Aware", "Conversational"],
+  },
+  {
+    id: "qwen",
+    name: "Qwen",
+    provider: "Alibaba",
+    logo: "💻",
+    emoji: "💻",
+    description: "Specialized in coding and long-form answers",
+    useCase: "Coding + Long Answers",
+    capabilities: ["Code Generation", "Long Responses", "Technical Analysis"],
+    speed: "medium",
+    accuracy: 91,
+    costPerRequest: 0,
+    isAvailable: true,
+    isPremium: false,
+    isFree: true,
+    tier: "free",
+    latency: 1200,
+    successRate: 93,
+    features: ["Code Expert", "Detailed Answers", "Technical Support"],
+  },
+  {
+    id: "gpt-mini",
+    name: "GPT Mini",
+    provider: "OpenAI",
+    logo: "⚡",
+    emoji: "⚡",
+    description: "Limited preview of premium GPT capabilities",
+    useCase: "Limited Premium Preview",
+    capabilities: ["Text Generation", "Analysis", "Problem Solving"],
+    speed: "fast",
+    accuracy: 90,
+    costPerRequest: 0,
+    isAvailable: true,
+    isPremium: false,
+    isFree: true,
+    tier: "free",
+    latency: 1000,
+    successRate: 94,
+    features: ["Premium Features", "Preview Access", "Limited Usage"],
+  },
+
+  // PREMIUM TIER MODELS
+  {
+    id: "gpt-5",
+    name: "GPT-5",
     provider: "OpenAI",
     logo: "🤖",
     emoji: "🤖",
-    description: "Advanced reasoning and language understanding",
-    capabilities: ["Text Generation", "Code Analysis", "Problem Solving", "Creative Writing"],
+    description: "Latest GPT model with advanced reasoning",
+    capabilities: ["Advanced Reasoning", "Code Analysis", "Problem Solving", "Creative Writing"],
     speed: "medium",
-    accuracy: 95,
-    costPerRequest: 0.03,
+    accuracy: 97,
+    costPerRequest: 0.05,
     isAvailable: true,
     isPremium: true,
+    isFree: false,
+    tier: "premium",
     latency: 2500,
-    successRate: 98,
+    successRate: 99,
     features: ["Vision Support", "Function Calling", "JSON Mode"],
-  },
-  {
-    id: "grok",
-    name: "Grok",
-    provider: "xAI",
-    logo: "⚡",
-    emoji: "⚡",
-    description: "Real-time information and witty responses",
-    capabilities: ["Real-time Data", "Reasoning", "Humor", "Current Events"],
-    speed: "fast",
-    accuracy: 92,
-    costPerRequest: 0.02,
-    isAvailable: true,
-    isPremium: true,
-    latency: 1800,
-    successRate: 96,
-    features: ["Real-time Web Access", "Sarcasm Support", "Fast Responses"],
   },
   {
     id: "claude-mythos",
@@ -68,12 +139,52 @@ const AI_MODELS: AIModel[] = [
     capabilities: ["Analysis", "Writing", "Research", "Safety-Focused"],
     speed: "medium",
     accuracy: 96,
-    costPerRequest: 0.025,
+    costPerRequest: 0.04,
     isAvailable: true,
     isPremium: true,
+    isFree: false,
+    tier: "premium",
     latency: 2200,
-    successRate: 97,
+    successRate: 98,
     features: ["Constitutional AI", "Extended Context", "Detailed Reasoning"],
+  },
+  {
+    id: "grok",
+    name: "Grok",
+    provider: "xAI",
+    logo: "⚡",
+    emoji: "⚡",
+    description: "Real-time information and witty responses",
+    capabilities: ["Real-time Data", "Reasoning", "Humor", "Current Events"],
+    speed: "fast",
+    accuracy: 93,
+    costPerRequest: 0.03,
+    isAvailable: true,
+    isPremium: true,
+    isFree: false,
+    tier: "premium",
+    latency: 1800,
+    successRate: 96,
+    features: ["Real-time Web Access", "Sarcasm Support", "Fast Responses"],
+  },
+  {
+    id: "gemini-3",
+    name: "Gemini 3",
+    provider: "Google",
+    logo: "🎨",
+    emoji: "🎨",
+    description: "Multimodal AI with image and text understanding",
+    capabilities: ["Image Analysis", "Text Generation", "Multimodal", "Code"],
+    speed: "fast",
+    accuracy: 94,
+    costPerRequest: 0.035,
+    isAvailable: true,
+    isPremium: true,
+    isFree: false,
+    tier: "premium",
+    latency: 1600,
+    successRate: 95,
+    features: ["Image Understanding", "Video Analysis", "Multimodal"],
   },
   {
     id: "perplexity",
@@ -84,32 +195,15 @@ const AI_MODELS: AIModel[] = [
     description: "Search-powered AI with verified sources",
     capabilities: ["Research", "Fact-Checking", "Source Citation", "Web Search"],
     speed: "fast",
-    accuracy: 94,
-    costPerRequest: 0.015,
-    isAvailable: true,
-    isPremium: false,
-    latency: 1500,
-    successRate: 95,
-    features: ["Web Search", "Source Citations", "Real-time Data"],
-  },
-  {
-    id: "gemini",
-    name: "Gemini 3",
-    provider: "Google",
-    logo: "🎨",
-    emoji: "🎨",
-    description: "Multimodal AI with image and text understanding",
-    capabilities: ["Image Analysis", "Text Generation", "Multimodal", "Code"],
-    speed: "fast",
-    accuracy: 93,
-    costPerRequest: 0.02,
+    accuracy: 95,
+    costPerRequest: 0.025,
     isAvailable: true,
     isPremium: true,
     isFree: false,
     tier: "premium",
-    latency: 1600,
-    successRate: 94,
-    features: ["Image Understanding", "Video Analysis", "Multimodal"],
+    latency: 1500,
+    successRate: 96,
+    features: ["Web Search", "Source Citations", "Real-time Data"],
   },
   {
     id: "manus-ai",
@@ -120,80 +214,74 @@ const AI_MODELS: AIModel[] = [
     description: "Optimized for your platform with custom capabilities",
     capabilities: ["Custom Training", "Fast Response", "Cost-Effective", "Integrated"],
     speed: "fast",
-    accuracy: 91,
-    costPerRequest: 0.01,
+    accuracy: 92,
+    costPerRequest: 0.02,
     isAvailable: true,
-    isPremium: false,
-    isFree: true,
-    tier: "free",
+    isPremium: true,
+    isFree: false,
+    tier: "premium",
     latency: 800,
-    successRate: 93,
-    features: ["Custom Models", "Always Free", "Fastest Response"],
+    successRate: 94,
+    features: ["Custom Models", "Integrated", "Fast Response"],
   },
 ];
 
 export default function AIModelSelector() {
   const { user } = useAuth();
-  const [selectedModel, setSelectedModel] = useState<string>("manus-ai");
-  const [models, setModels] = useState<AIModel[]>(AI_MODELS);
-  const [filterSpeed, setFilterSpeed] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("accuracy");
+  const [selectedModel, setSelectedModel] = useState("gemini-flash");
+  const [filterSpeed, setFilterSpeed] = useState("all");
+  const [sortBy, setSortBy] = useState("accuracy");
   const [showComparison, setShowComparison] = useState(false);
 
-  // Filter and sort models
-  useEffect(() => {
-    let filtered = [...AI_MODELS];
-
-    if (filterSpeed !== "all") {
-      filtered = filtered.filter((m) => m.speed === filterSpeed);
-    }
-
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "accuracy":
-          return b.accuracy - a.accuracy;
-        case "speed":
-          return a.latency - b.latency;
-        case "cost":
-          return a.costPerRequest - b.costPerRequest;
-        case "successRate":
-          return b.successRate - a.successRate;
-        default:
-          return 0;
-      }
-    });
-
-    setModels(filtered);
-  }, [filterSpeed, sortBy]);
-
   const selectedModelData = AI_MODELS.find((m) => m.id === selectedModel);
+
   const getSpeedIcon = (speed: string) => {
     switch (speed) {
       case "fast":
-        return <Zap className="w-4 h-4 text-green-400" />;
-      case "medium":
         return <Zap className="w-4 h-4 text-yellow-400" />;
+      case "medium":
+        return <Eye className="w-4 h-4 text-blue-400" />;
       case "slow":
-        return <Zap className="w-4 h-4 text-red-400" />;
+        return <Brain className="w-4 h-4 text-purple-400" />;
       default:
         return null;
     }
   };
 
+  const filteredModels = AI_MODELS.filter((model) => {
+    if (filterSpeed === "all") return true;
+    return model.speed === filterSpeed;
+  });
+
+  const sortedModels = [...filteredModels].sort((a, b) => {
+    switch (sortBy) {
+      case "accuracy":
+        return b.accuracy - a.accuracy;
+      case "speed":
+        return a.latency - b.latency;
+      case "cost":
+        return a.costPerRequest - b.costPerRequest;
+      case "successRate":
+        return b.successRate - a.successRate;
+      default:
+        return 0;
+    }
+  });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">AI Model Selector</h1>
-          <p className="text-purple-200">Choose the perfect AI model for your needs</p>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">AI Model Selector</h1>
+          <p className="text-purple-300 text-lg">Choose your preferred AI model for different tasks</p>
         </div>
 
-        {/* Currently Selected Model */}
+        {/* Selected Model Details */}
         {selectedModelData && (
-          <Card className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30 mb-8">
+          <Card className="bg-gradient-to-r from-slate-800 to-slate-700 border-purple-500/30 shadow-lg shadow-purple-500/10">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
                   <div className="text-6xl">{selectedModelData.emoji}</div>
                   <div>
@@ -278,7 +366,7 @@ export default function AIModelSelector() {
             <Button
               onClick={() => setShowComparison(!showComparison)}
               variant="outline"
-              className="w-full border-purple-500/30 text-purple-200"
+              className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-600/10"
             >
               {showComparison ? "Hide Comparison" : "Compare Models"}
             </Button>
@@ -287,7 +375,7 @@ export default function AIModelSelector() {
 
         {/* Models Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {models.map((model) => (
+          {sortedModels.map((model) => (
             <Card
               key={model.id}
               className={`cursor-pointer transition-all border-2 ${
@@ -317,6 +405,9 @@ export default function AIModelSelector() {
                 </div>
                 <CardTitle className="text-white mt-2">{model.name}</CardTitle>
                 <CardDescription className="text-purple-300">{model.provider}</CardDescription>
+                {model.useCase && (
+                  <p className="text-xs text-blue-300 mt-1 font-semibold">{model.useCase}</p>
+                )}
               </CardHeader>
 
               <CardContent className="space-y-4">
@@ -358,12 +449,17 @@ export default function AIModelSelector() {
 
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-purple-300">Tier</span>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                      model.tier === 'free' ? 'bg-green-600/20 text-green-300' :
-                      model.tier === 'starter' ? 'bg-blue-600/20 text-blue-300' :
-                      model.tier === 'premium' ? 'bg-yellow-600/20 text-yellow-300' :
-                      'bg-purple-600/20 text-purple-300'
-                    }`}>
+                    <span
+                      className={`text-xs font-semibold px-2 py-1 rounded ${
+                        model.tier === "free"
+                          ? "bg-green-600/20 text-green-300"
+                          : model.tier === "starter"
+                            ? "bg-blue-600/20 text-blue-300"
+                            : model.tier === "premium"
+                              ? "bg-yellow-600/20 text-yellow-300"
+                              : "bg-purple-600/20 text-purple-300"
+                      }`}
+                    >
                       {model.tier.charAt(0).toUpperCase() + model.tier.slice(1)}
                     </span>
                   </div>
@@ -378,38 +474,8 @@ export default function AIModelSelector() {
                         {cap}
                       </Badge>
                     ))}
-                    {model.capabilities.length > 3 && (
-                      <Badge variant="outline" className="border-purple-500/30 text-purple-300 text-xs">
-                        +{model.capabilities.length - 3}
-                      </Badge>
-                    )}
                   </div>
                 </div>
-
-                {/* Status */}
-                <div className="pt-2 border-t border-purple-500/20">
-                  {model.isAvailable ? (
-                    <Badge className="w-full justify-center bg-green-600/20 text-green-400 border-green-500/30">
-                      ✓ Available
-                    </Badge>
-                  ) : (
-                    <Badge className="w-full justify-center bg-red-600/20 text-red-400 border-red-500/30">
-                      ✗ Unavailable
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Select Button */}
-                <Button
-                  className={`w-full ${
-                    selectedModel === model.id
-                      ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                      : "border-purple-500/30 text-purple-200"
-                  }`}
-                  variant={selectedModel === model.id ? "default" : "outline"}
-                >
-                  {selectedModel === model.id ? "✓ Selected" : "Select"}
-                </Button>
               </CardContent>
             </Card>
           ))}
@@ -417,7 +483,7 @@ export default function AIModelSelector() {
 
         {/* Comparison Table */}
         {showComparison && (
-          <Card className="bg-slate-800 border-purple-500/20 mt-8">
+          <Card className="bg-slate-800 border-purple-500/20">
             <CardHeader>
               <CardTitle className="text-white">Model Comparison</CardTitle>
             </CardHeader>
@@ -428,28 +494,29 @@ export default function AIModelSelector() {
                     <tr className="border-b border-purple-500/20">
                       <th className="text-left py-2 px-2 text-purple-300">Model</th>
                       <th className="text-center py-2 px-2 text-purple-300">Accuracy</th>
-                      <th className="text-center py-2 px-2 text-purple-300">Latency</th>
+                      <th className="text-center py-2 px-2 text-purple-300">Speed</th>
                       <th className="text-center py-2 px-2 text-purple-300">Success Rate</th>
                       <th className="text-center py-2 px-2 text-purple-300">Cost</th>
-                      <th className="text-center py-2 px-2 text-purple-300">Type</th>
+                      <th className="text-center py-2 px-2 text-purple-300">Tier</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {models.map((model) => (
-                      <tr key={model.id} className="border-b border-purple-500/10 hover:bg-purple-500/10">
-                        <td className="py-2 px-2 text-white font-semibold">{model.emoji} {model.name}</td>
-                        <td className="text-center py-2 px-2 text-purple-200">{model.accuracy}%</td>
-                        <td className="text-center py-2 px-2 text-purple-200">{model.latency}ms</td>
-                        <td className="text-center py-2 px-2 text-purple-200">{model.successRate}%</td>
-                        <td className="text-center py-2 px-2 text-purple-200">${model.costPerRequest}</td>
+                    {sortedModels.map((model) => (
+                      <tr key={model.id} className="border-b border-purple-500/10">
+                        <td className="py-2 px-2 text-white font-semibold">{model.name}</td>
+                        <td className="text-center py-2 px-2 text-white">{model.accuracy}%</td>
+                        <td className="text-center py-2 px-2 text-white">{model.latency}ms</td>
+                        <td className="text-center py-2 px-2 text-white">{model.successRate}%</td>
+                        <td className="text-center py-2 px-2 text-white">${model.costPerRequest}</td>
                         <td className="text-center py-2 px-2">
                           <Badge
-                            variant="outline"
-                            className={`border-purple-500/30 ${
-                              model.isPremium ? "text-yellow-300" : "text-green-300"
-                            }`}
+                            className={
+                              model.tier === "free"
+                                ? "bg-green-600/20 text-green-300"
+                                : "bg-yellow-600/20 text-yellow-300"
+                            }
                           >
-                            {model.isPremium ? "Premium" : "Free"}
+                            {model.tier}
                           </Badge>
                         </td>
                       </tr>

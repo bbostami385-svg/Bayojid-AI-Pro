@@ -131,6 +131,28 @@ export const AI_MODELS_CONFIG: Record<string, AIModelConfig> = {
     maxTokens: 4096,
     costPerMillion: 2,
   },
+  "qwen": {
+    id: "qwen",
+    name: "Qwen",
+    provider: "Alibaba",
+    envKey: "QWEN_API_KEY",
+    apiEndpoint: "https://api.aliyun.com/qwen",
+    isConfigured: !!process.env.QWEN_API_KEY,
+    capabilities: ["text", "code", "reasoning", "long_context"],
+    maxTokens: 8000,
+    costPerMillion: 1,
+  },
+  "gpt-mini": {
+    id: "gpt-mini",
+    name: "GPT Mini",
+    provider: "OpenAI",
+    envKey: "GPT_MINI_API_KEY",
+    apiEndpoint: "https://api.openai.com/v1",
+    isConfigured: !!process.env.GPT_MINI_API_KEY,
+    capabilities: ["text", "code", "analysis"],
+    maxTokens: 2048,
+    costPerMillion: 0.5,
+  },
 };
 
 /**
@@ -218,19 +240,39 @@ export async function callAIModel(
  */
 export function getModelRecommendations(useCase: string): AIModelConfig[] {
   const recommendations: Record<string, string[]> = {
-    writing: ["claude-mythos", "gpt-5", "gpt-5-mini"],
-    coding: ["gpt-5", "gpt-5-mini", "deepseek"],
+    writing: ["claude-mythos", "gpt-5", "qwen"],
+    coding: ["qwen", "gpt-5", "deepseek"],
     analysis: ["gpt-5", "claude-mythos", "perplexity"],
     creative: ["gpt-4", "claude-mythos", "grok"],
     research: ["perplexity", "gpt-5", "claude-mythos"],
     realtime: ["gemini-flash", "grok", "perplexity"],
     multimodal: ["gemini-3", "gemini-flash", "gpt-4"],
-    free: ["gemini-flash", "gpt-5-mini", "deepseek", "manus-ai"],
-    default: ["manus-ai", "gpt-5-mini", "gemini-flash"],
+    free: ["gemini-flash", "deepseek", "qwen", "gpt-mini"],
+    default: ["gemini-flash", "deepseek", "qwen"],
   };
 
   const recommendedIds = recommendations[useCase] || recommendations.default;
   return recommendedIds
+    .map((id) => AI_MODELS_CONFIG[id])
+    .filter((model) => model !== undefined) as AIModelConfig[];
+}
+
+/**
+ * Get free tier models
+ */
+export function getFreeTierModels(): AIModelConfig[] {
+  const freeModelIds = ["gemini-flash", "deepseek", "qwen", "gpt-mini"];
+  return freeModelIds
+    .map((id) => AI_MODELS_CONFIG[id])
+    .filter((model) => model !== undefined) as AIModelConfig[];
+}
+
+/**
+ * Get premium tier models
+ */
+export function getPremiumTierModels(): AIModelConfig[] {
+  const premiumModelIds = ["gpt-5", "claude-mythos", "grok", "gemini-3", "perplexity", "manus-ai"];
+  return premiumModelIds
     .map((id) => AI_MODELS_CONFIG[id])
     .filter((model) => model !== undefined) as AIModelConfig[];
 }
@@ -282,6 +324,22 @@ export async function getAllModelsStatus() {
 }
 
 /**
+ * Get free tier models status
+ */
+export async function getFreeTierModelsStatus() {
+  const freeModels = getFreeTierModels();
+  return Promise.all(freeModels.map((model) => getModelStatus(model.id)));
+}
+
+/**
+ * Get premium tier models status
+ */
+export async function getPremiumTierModelsStatus() {
+  const premiumModels = getPremiumTierModels();
+  return Promise.all(premiumModels.map((model) => getModelStatus(model.id)));
+}
+
+/**
  * Format model info for display
  */
 export function formatModelInfo(modelId: string): string {
@@ -300,6 +358,8 @@ export default {
   getModelApiKey,
   callAIModel,
   getModelRecommendations,
+  getFreeTierModels,
+  getPremiumTierModels,
   calculateCost,
   getModelStatus,
   getAllModelsStatus,
