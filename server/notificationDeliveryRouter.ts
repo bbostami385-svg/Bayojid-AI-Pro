@@ -9,7 +9,6 @@ import * as webhookDelivery from "./webhookNotificationDelivery";
 // Create service object with all functions
 const notificationService = {
   getDeliveryHistory: webhookDelivery.getDeliveryHistory,
-  getScheduledReport: webhookDelivery.getDeliveryRecord,
   ...webhookDelivery
 };
 
