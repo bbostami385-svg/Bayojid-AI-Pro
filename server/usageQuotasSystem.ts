@@ -59,7 +59,7 @@ export async function getUserQuota(userId: string): Promise<UserQuota | null> {
 
   const stat = stats[0];
   const now = new Date();
-  const resetDate = new Date(stat.monthlyResetDate);
+  const resetDate = stat.monthlyResetDate instanceof Date ? stat.monthlyResetDate : new Date(stat.monthlyResetDate as string | number);
 
   // Check if quota should be reset (new month)
   if (now > resetDate) {
@@ -69,7 +69,7 @@ export async function getUserQuota(userId: string): Promise<UserQuota | null> {
       .set({
         videoMinutesUsed: 0,
         imageGenerationsUsed: 0,
-        monthlyResetDate: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+        monthlyResetDate: new Date(now.getFullYear(), now.getMonth() + 1, 1) as any,
       })
       .where(eq(userUsageStats.userId, userId));
 
@@ -80,7 +80,7 @@ export async function getUserQuota(userId: string): Promise<UserQuota | null> {
       imageGenerationsLimit: TIER_QUOTAS[(stat.userTier as "free" | "starter" | "premium" | "enterprise") || "free"].imageGenerationsLimit,
       videoMinutesUsed: 0,
       imageGenerationsUsed: 0,
-      resetDate: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+      resetDate: new Date(now.getFullYear(), now.getMonth() + 1, 1) as any,
     };
   }
 
