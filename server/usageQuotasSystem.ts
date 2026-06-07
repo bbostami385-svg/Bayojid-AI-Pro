@@ -4,7 +4,7 @@
  */
 
 import { getDb } from "./db";
-import { userUsageStats } from "@/drizzle/schema";
+import { userUsageStats } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
 export interface UserQuota {
@@ -45,7 +45,8 @@ export const TIER_QUOTAS = {
  * Get user's current usage quota
  */
 export async function getUserQuota(userId: string): Promise<UserQuota | null> {
-  const db = getDb();
+  const db = await getDb();
+  if (!db) return null;
   const stats = await db
     .select()
     .from(userUsageStats)
@@ -75,8 +76,8 @@ export async function getUserQuota(userId: string): Promise<UserQuota | null> {
     return {
       userId,
       tier: (stat.userTier as any) || "free",
-      videoMinutesLimit: TIER_QUOTAS[(stat.userTier as any) || "free"].videoMinutesLimit,
-      imageGenerationsLimit: TIER_QUOTAS[(stat.userTier as any) || "free"].imageGenerationsLimit,
+      videoMinutesLimit: TIER_QUOTAS[(stat.userTier as "free" | "starter" | "premium" | "enterprise") || "free"].videoMinutesLimit,
+      imageGenerationsLimit: TIER_QUOTAS[(stat.userTier as "free" | "starter" | "premium" | "enterprise") || "free"].imageGenerationsLimit,
       videoMinutesUsed: 0,
       imageGenerationsUsed: 0,
       resetDate: new Date(now.getFullYear(), now.getMonth() + 1, 1),
@@ -86,10 +87,10 @@ export async function getUserQuota(userId: string): Promise<UserQuota | null> {
   return {
     userId,
     tier: (stat.userTier as any) || "free",
-    videoMinutesLimit: TIER_QUOTAS[(stat.userTier as any) || "free"].videoMinutesLimit,
-    imageGenerationsLimit: TIER_QUOTAS[(stat.userTier as any) || "free"].imageGenerationsLimit,
-    videoMinutesUsed: stat.videoMinutesUsed || 0,
-    imageGenerationsUsed: stat.imageGenerationsUsed || 0,
+    videoMinutesLimit: TIER_QUOTAS[(stat.userTier as "free" | "starter" | "premium" | "enterprise") || "free"].videoMinutesLimit,
+    imageGenerationsLimit: TIER_QUOTAS[(stat.userTier as "free" | "starter" | "premium" | "enterprise") || "free"].imageGenerationsLimit,
+    videoMinutesUsed: (stat.videoMinutesUsed as number) || 0,
+    imageGenerationsUsed: (stat.imageGenerationsUsed as number) || 0,
     resetDate,
   };
 }
@@ -120,7 +121,8 @@ export async function canUserGenerateImage(userId: string): Promise<boolean> {
  * Record video editing usage
  */
 export async function recordVideoUsage(userId: string, durationMinutes: number): Promise<void> {
-  const db = getDb();
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
   const quota = await getUserQuota(userId);
 
   if (!quota) {
@@ -147,7 +149,8 @@ export async function recordVideoUsage(userId: string, durationMinutes: number):
  * Record image generation usage
  */
 export async function recordImageUsage(userId: string): Promise<void> {
-  const db = getDb();
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
   const quota = await getUserQuota(userId);
 
   if (!quota) {
@@ -219,7 +222,8 @@ export async function getUpgradeRecommendation(userId: string): Promise<string |
  * Upgrade user tier
  */
 export async function upgradeUserTier(userId: string, newTier: "starter" | "premium" | "enterprise"): Promise<void> {
-  const db = getDb();
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
   await db
     .update(userUsageStats)
     .set({
