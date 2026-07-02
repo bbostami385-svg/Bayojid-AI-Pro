@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,7 @@ import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 export default function TwoFAVerifyPage() {
-  const [, navigate] = useLocation();
-  const router = useNavigate();
+  const [location, navigate] = useLocation();
   const [code, setCode] = useState("");
   const [useBackupCode, setUseBackupCode] = useState(false);
   const [error, setError] = useState("");
@@ -39,7 +38,7 @@ export default function TwoFAVerifyPage() {
       if (result.success) {
         setSuccess(true);
         setTimeout(() => {
-          router("/dashboard");
+          navigate("/dashboard", { replace: true });
         }, 1500);
       } else {
         setError(result.message || "Invalid code. Please try again.");
