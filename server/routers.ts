@@ -59,6 +59,11 @@ import { reportSchedulingRouter } from "./reportSchedulingRouter";
 import { apiUsageAnalyticsRouter } from "./apiUsageAnalyticsRouter";
 import { auditLogRouter } from "./auditLogRouter";
 import { dashboardWidgetsRouter } from "./dashboardWidgetsRouter";
+import { authRouter } from "./authRouter";
+import { passwordResetRouter } from "./passwordResetRouter";
+import { oauthRouter } from "./oauthRouter";
+import { twoFARouter } from "./twoFARouter";
+import { paymentRouter } from "./paymentRouter";
 
 const personalityPrompts: Record<string, string> = {
   friendly: "You are a friendly and warm AI assistant. Be conversational and approachable.",
@@ -70,16 +75,11 @@ const personalityPrompts: Record<string, string> = {
 export const appRouter = router({
   system: systemRouter,
   aiModels: aiModelsRouter,
-  auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
+  auth: authRouter,
+  passwordReset: passwordResetRouter,
+  oauth: oauthRouter,
+  twoFA: twoFARouter,
+  payment: paymentRouter,
 
   chat: router({
     createConversation: protectedProcedure

@@ -1,4 +1,4 @@
-import { int, mysqlTable, varchar, text, timestamp, mysqlEnum, decimal, json, boolean, bigint as drizzleBigint, index } from "drizzle-orm/mysql-core";
+import { int, mysqlTable, varchar, text, timestamp, mysqlEnum, decimal, json, boolean, bigint as drizzleBigint, index, date, unique } from "drizzle-orm/mysql-core";
 
 // Explicitly export bigint to ensure it's available at runtime
 export const bigint = drizzleBigint;
@@ -670,9 +670,10 @@ export const aiModelUsage = mysqlTable("aiModelUsage", {
   success: boolean("success").default(true).notNull(),
   errorMessage: text("errorMessage"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  index: index("idx_userId_model").on("userId", "model"),
-  index2: index("idx_model_createdAt").on("model", "createdAt"),
-});
+}, (table) => ({
+  idxUserIdModel: index("idx_userId_model").on(table.userId, table.model),
+  idxModelCreatedAt: index("idx_model_createdAt").on(table.model, table.createdAt),
+}));
 
 export type AIModelUsage = typeof aiModelUsage.$inferSelect;
 export type InsertAIModelUsage = typeof aiModelUsage.$inferInsert;
@@ -706,9 +707,10 @@ export const userModelPreferences = mysqlTable("userModelPreferences", {
   totalCost: decimal("totalCost", { precision: 15, scale: 6 }).default("0").notNull(),
   lastUsed: timestamp("lastUsed").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  unique: unique().on("userId", "model"),
-  index: index("idx_userId_model_pref").on("userId", "model"),
-});
+}, (table) => ({
+  uniqueUserIdModel: unique().on(table.userId, table.model),
+  idxUserIdModelPref: index("idx_userId_model_pref").on(table.userId, table.model),
+}));
 
 export type UserModelPreference = typeof userModelPreferences.$inferSelect;
 export type InsertUserModelPreference = typeof userModelPreferences.$inferInsert;
@@ -727,9 +729,10 @@ export const dailyModelTrend = mysqlTable("dailyModelTrend", {
   successCount: int("successCount").default(0).notNull(),
   errorCount: int("errorCount").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  unique: unique().on("model", "date"),
-  index: index("idx_model_date").on("model", "date"),
-});
+}, (table) => ({
+  uniqueModelDate: unique().on(table.model, table.date),
+  idxModelDate: index("idx_model_date").on(table.model, table.date),
+}));
 
 export type DailyModelTrend = typeof dailyModelTrend.$inferSelect;
 export type InsertDailyModelTrend = typeof dailyModelTrend.$inferInsert;
@@ -745,8 +748,9 @@ export const modelCostAnalysis = mysqlTable("modelCostAnalysis", {
   totalCost: decimal("totalCost", { precision: 15, scale: 6 }).default("0").notNull(),
   costEfficiency: decimal("costEfficiency", { precision: 5, scale: 2 }).default("0"), // tokens per dollar
   lastUpdated: timestamp("lastUpdated").defaultNow().onUpdateNow().notNull(),
-  index: index("idx_model_cost").on("model"),
-});
+}, (table) => ({
+  idxModelCost: index("idx_model_cost").on(table.model),
+}));
 
 export type ModelCostAnalysis = typeof modelCostAnalysis.$inferSelect;
 export type InsertModelCostAnalysis = typeof modelCostAnalysis.$inferInsert;
@@ -768,10 +772,230 @@ export const userUsageStats = mysqlTable("userUsageStats", {
   lastActivityDate: timestamp("lastActivityDate").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  unique: unique().on("userId"),
-  idxUserId: index("idx_userId_usage").on("userId"),
-  idxTier: index("idx_tier_usage").on("tier"),
-});
+}, (table) => ({
+  uniqueUserId: unique().on(table.userId),
+  idxUserIdUsage: index("idx_userId_usage").on(table.userId),
+  idxTierUsage: index("idx_tier_usage").on(table.tier),
+}));
 
 export type UserUsageStats = typeof userUsageStats.$inferSelect;
 export type InsertUserUsageStats = typeof userUsageStats.$inferInsert;
+
+
+/**
+ * ==================== TWO-FACTOR AUTHENTICATION (2FA) ====================
+ */
+
+/**
+ * User 2FA Settings table - stores 2FA configuration for users
+ */
+export const user2FASettings = mysqlTable("user2FASettings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  isEnabled: boolean("isEnabled").default(false).notNull(),
+  method: mysqlEnum("method", ["totp", "sms", "email"]).default("totp").notNull(),
+  secret: varchar("secret", { length: 255 }), // TOTP secret (encrypted)
+  backupCodes: json("backupCodes").$type<string[]>().default([]), // Backup codes (encrypted)
+  phoneNumber: varchar("phoneNumber", { length: 20 }),
+  verifiedAt: timestamp("verifiedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type User2FASetting = typeof user2FASettings.$inferSelect;
+export type InsertUser2FASetting = typeof user2FASettings.$inferInsert;
+
+/**
+ * 2FA Verification Attempts table - tracks 2FA verification attempts
+ */
+export const twoFAAttempts = mysqlTable("twoFAAttempts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  method: mysqlEnum("method", ["totp", "sms", "email"]).notNull(),
+  code: varchar("code", { length: 10 }).notNull(),
+  isValid: boolean("isValid").default(false).notNull(),
+  ipAddress: varchar("ipAddress", { length: 50 }),
+  userAgent: text("userAgent"),
+  attemptedAt: timestamp("attemptedAt").defaultNow().notNull(),
+}, (table) => ({
+  idxUserId2fa: index("idx_userId_2fa").on(table.userId),
+}));
+
+export type TwoFAAttempt = typeof twoFAAttempts.$inferSelect;
+export type InsertTwoFAAttempt = typeof twoFAAttempts.$inferInsert;
+
+/**
+ * ==================== PAYMENT GATEWAYS ====================
+ */
+
+/**
+ * Stripe Transactions table - stores Stripe payment transactions
+ */
+export const stripeTransactions = mysqlTable("stripeTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 100 }).notNull().unique(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("USD").notNull(),
+  status: mysqlEnum("status", ["pending", "succeeded", "failed", "cancelled"]).default("pending").notNull(),
+  paymentMethod: varchar("paymentMethod", { length: 50 }),
+  planId: int("planId").references(() => subscriptionPlans.id),
+  description: text("description"),
+  metadata: json("metadata").$type<Record<string, string>>().default({}),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  idxUserIdStripe: index("idx_userId_stripe").on(table.userId),
+}));
+
+export type StripeTransaction = typeof stripeTransactions.$inferSelect;
+export type InsertStripeTransaction = typeof stripeTransactions.$inferInsert;
+
+/**
+ * bKash Transactions table - stores bKash mobile banking transactions
+ */
+export const bkashTransactions = mysqlTable("bkashTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  bkashPaymentId: varchar("bkashPaymentId", { length: 100 }).notNull().unique(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("BDT").notNull(),
+  status: mysqlEnum("status", ["pending", "completed", "failed", "cancelled"]).default("pending").notNull(),
+  phoneNumber: varchar("phoneNumber", { length: 20 }).notNull(),
+  planId: int("planId").references(() => subscriptionPlans.id),
+  transactionReference: varchar("transactionReference", { length: 100 }),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  idxUserIdBkash: index("idx_userId_bkash").on(table.userId),
+}));
+
+export type BkashTransaction = typeof bkashTransactions.$inferSelect;
+export type InsertBkashTransaction = typeof bkashTransactions.$inferInsert;
+
+/**
+ * Nagad Transactions table - stores Nagad mobile banking transactions
+ */
+export const nagadTransactions = mysqlTable("nagadTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  nagadPaymentId: varchar("nagadPaymentId", { length: 100 }).notNull().unique(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("BDT").notNull(),
+  status: mysqlEnum("status", ["pending", "completed", "failed", "cancelled"]).default("pending").notNull(),
+  phoneNumber: varchar("phoneNumber", { length: 20 }).notNull(),
+  planId: int("planId").references(() => subscriptionPlans.id),
+  transactionReference: varchar("transactionReference", { length: 100 }),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  idxUserIdNagad: index("idx_userId_nagad").on(table.userId),
+}));
+
+export type NagadTransaction = typeof nagadTransactions.$inferSelect;
+export type InsertNagadTransaction = typeof nagadTransactions.$inferInsert;
+
+/**
+ * Rocket Transactions table - stores Rocket mobile banking transactions
+ */
+export const rocketTransactions = mysqlTable("rocketTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  rocketPaymentId: varchar("rocketPaymentId", { length: 100 }).notNull().unique(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("BDT").notNull(),
+  status: mysqlEnum("status", ["pending", "completed", "failed", "cancelled"]).default("pending").notNull(),
+  phoneNumber: varchar("phoneNumber", { length: 20 }).notNull(),
+  planId: int("planId").references(() => subscriptionPlans.id),
+  transactionReference: varchar("transactionReference", { length: 100 }),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  idxUserIdRocket: index("idx_userId_rocket").on(table.userId),
+}));
+
+export type RocketTransaction = typeof rocketTransactions.$inferSelect;
+export type InsertRocketTransaction = typeof rocketTransactions.$inferInsert;
+
+/**
+ * Payment Methods table - stores user payment methods
+ */
+export const paymentMethods = mysqlTable("paymentMethods", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: mysqlEnum("type", ["card", "bkash", "nagad", "rocket", "bank_transfer"]).notNull(),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  // Card fields
+  cardLastFour: varchar("cardLastFour", { length: 4 }),
+  cardBrand: varchar("cardBrand", { length: 50 }),
+  cardExpiry: varchar("cardExpiry", { length: 10 }),
+  // Mobile banking fields
+  phoneNumber: varchar("phoneNumber", { length: 20 }),
+  // Bank transfer fields
+  bankName: varchar("bankName", { length: 100 }),
+  accountNumber: varchar("accountNumber", { length: 50 }),
+  accountHolder: varchar("accountHolder", { length: 255 }),
+  // Stripe field
+  stripePaymentMethodId: varchar("stripePaymentMethodId", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  idxUserIdPaymentMethod: index("idx_userId_payment_method").on(table.userId),
+}));
+
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
+export type InsertPaymentMethod = typeof paymentMethods.$inferInsert;
+
+/**
+ * Payment History table - unified payment history across all gateways
+ */
+export const paymentHistory = mysqlTable("paymentHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  gateway: mysqlEnum("gateway", ["stripe", "sslcommerz", "bkash", "nagad", "rocket"]).notNull(),
+  transactionId: varchar("transactionId", { length: 100 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  status: mysqlEnum("status", ["pending", "completed", "failed", "cancelled"]).default("pending").notNull(),
+  planId: int("planId").references(() => subscriptionPlans.id),
+  description: text("description"),
+  metadata: json("metadata").$type<Record<string, string>>().default({}),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  idxUserIdPaymentHistory: index("idx_userId_payment_history").on(table.userId),
+  idxGatewayStatus: index("idx_gateway_status").on(table.gateway, table.status),
+}));
+
+export type PaymentHistoryRecord = typeof paymentHistory.$inferSelect;
+export type InsertPaymentHistoryRecord = typeof paymentHistory.$inferInsert;
+
+/**
+ * Refunds table - stores refund records
+ */
+export const refunds = mysqlTable("refunds", {
+  id: int("id").autoincrement().primaryKey(),
+  paymentHistoryId: int("paymentHistoryId").notNull().references(() => paymentHistory.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  reason: text("reason"),
+  status: mysqlEnum("status", ["pending", "completed", "failed"]).default("pending").notNull(),
+  processedAt: timestamp("processedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  idxUserIdRefund: index("idx_userId_refund").on(table.userId),
+}));
+
+export type Refund = typeof refunds.$inferSelect;
+export type InsertRefund = typeof refunds.$inferInsert;
+

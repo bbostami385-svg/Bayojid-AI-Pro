@@ -32,12 +32,34 @@ import { ThemeSwitcher } from "./components/ThemeSwitcher";
 import { LanguageSelector } from "./components/LanguageSelector";
 import { QuotaMonitor } from "./components/QuotaMonitor";
 import AdminDashboard from "./pages/AdminDashboard";
+import { LoginPage } from "./pages/LoginPage";
+import { SignupPage } from "./pages/SignupPage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { OAuthCallbackPage } from "./pages/OAuthCallbackPage";
+import TwoFASetupPage from "./pages/TwoFASetupPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import PaymentHistoryPage from "./pages/PaymentHistoryPage";
+import PaymentMethodsPage from "./pages/PaymentMethodsPage";
+import TwoFAVerifyPage from "./pages/TwoFAVerifyPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"./"} component={Home} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/signup" component={SignupPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/oauth/callback" component={OAuthCallbackPage} />
+      <Route path="/2fa-setup" component={TwoFASetupPage} />
+      <Route path="/checkout" component={CheckoutPage} />
+      <Route path="/payment-history" component={PaymentHistoryPage} />
+      <Route path="/payment-methods" component={PaymentMethodsPage} />
+      <Route path="/2fa-verify" component={TwoFAVerifyPage} />
+      <Route path="/profile-settings" component={ProfilePage} />
       <Route path="/chat/:id" component={Chat} />
       <Route path="/profile" component={Profile} />
       <Route path="/templates" component={ChatTemplates} />
