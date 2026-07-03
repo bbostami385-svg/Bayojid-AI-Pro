@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { 
-  Loader2, Plus, MessageCircle, LogOut, Search, Moon, Sun, 
-  Zap, BarChart3, Palette, Code, ShoppingCart, Smartphone, 
-  Brain, Lightbulb, FileText, Music, Image, Video, Send, Paperclip, Smile
+  Loader2, LogOut, Search, Moon, Sun, 
+  Palette, Code, ShoppingCart, Smartphone, 
+  Brain, Lightbulb, FileText, Music, Send, Paperclip
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
@@ -205,7 +205,7 @@ export default function Home() {
                 variant="ghost"
                 className="text-gray-300 hover:text-white hover:bg-slate-700/50"
               >
-                <Image className="w-4 h-4 mr-2" />
+                <Palette className="w-4 h-4 mr-2" />
                 Image
               </Button>
               <Button
