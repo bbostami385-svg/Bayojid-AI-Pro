@@ -70,4 +70,33 @@ router.get('/status', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Simulate Error Endpoint
+ * POST /webhooks/simulate-error
+ * Test endpoint to simulate error handling
+ */
+router.post('/simulate-error', (req: Request, res: Response) => {
+  try {
+    const { errorType = 'generic', message = 'Simulated error for testing' } = req.body;
+
+    // Log the simulated error
+    console.error(`[Webhook] Simulated ${errorType} error:`, message);
+
+    // Return error response
+    res.status(500).json({
+      success: false,
+      error: {
+        type: errorType,
+        message: message,
+        timestamp: new Date().toISOString(),
+        simulatedAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
+  }
+});
+
 export default router;
