@@ -449,7 +449,7 @@ export const appRouter = router({
   challenges: challengesRouter,
   challengeNotifications: challengeNotificationsRouter,
   leaderboardSharing: leaderboardSharingRouter,
-  payment: stripePaymentRouter,
+  stripePayment: stripePaymentRouter,
   sslcommerzPayment: sslcommerzPaymentRouter,
   refund: refundRouter,
   conversationMemory: conversationMemoryRouter,
