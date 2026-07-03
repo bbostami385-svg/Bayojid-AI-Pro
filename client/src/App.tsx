@@ -43,6 +43,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import PaymentHistoryPage from "./pages/PaymentHistoryPage";
 import PaymentMethodsPage from "./pages/PaymentMethodsPage";
 import TwoFAVerifyPage from "./pages/TwoFAVerifyPage";
+import OnboardingTutorial from "./components/OnboardingTutorial";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -102,6 +103,7 @@ function App() {
         switchable
       >
         <TooltipProvider>
+          <OnboardingTutorial />
           <Toaster />
           <div className="flex flex-col min-h-screen">
             {/* Header with Theme, Language, and Quota Switchers */}
