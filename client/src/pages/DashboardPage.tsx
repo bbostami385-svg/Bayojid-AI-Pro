@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import WelcomeScreen from "@/components/WelcomeScreen";
 import {
   MessageSquare,
   Settings,
@@ -32,9 +33,19 @@ const navigationItems = [
 
 export function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [location] = useLocation();
   const { data: user } = trpc.auth.me.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation();
+
+  useEffect(() => {
+    // Show welcome screen only for new users (first login)
+    const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+    if (!hasSeenWelcome && user?.name) {
+      setShowWelcome(true);
+      localStorage.setItem('hasSeenWelcome', 'true');
+    }
+  }, [user?.name]);
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -44,6 +55,13 @@ export function DashboardPage() {
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
+      {/* Welcome Screen with Confetti */}
+      {showWelcome && user?.name && (
+        <WelcomeScreen
+          userName={user.name}
+          onComplete={() => setShowWelcome(false)}
+        />
+      )}
       {/* Sidebar */}
       <aside className={`${sidebarClass} bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition-all duration-300 flex flex-col`}>
         {/* Logo */}
