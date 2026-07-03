@@ -27,7 +27,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
     { divider: true },
     { icon: Clock, label: "Scheduled tasks", action: () => navigate("/scheduled-tasks") },
     { icon: BookOpen, label: "Knowledge", action: () => navigate("/knowledge") },
-    { icon: Mail, label: "Mail Manus", action: () => navigate("/mail") },
+    { icon: Mail, label: "Your Mail", action: () => navigate("/mail") },
     { icon: Lock, label: "Data controls", action: () => navigate("/data-controls") },
     { icon: Globe, label: "Cloud Browser", action: () => navigate("/cloud-browser") },
     { icon: Zap, label: "Skills", action: () => navigate("/skills") },
