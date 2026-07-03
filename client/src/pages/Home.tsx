@@ -12,6 +12,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useTheme } from "@/contexts/ThemeContext";
+import { SettingsMenu } from "@/components/SettingsMenu";
 
 export default function Home() {
   const { user, loading, isAuthenticated, logout } = useAuth();
@@ -124,18 +125,11 @@ export default function Home() {
             </Button>
             <div className="flex items-center gap-2 text-gray-300">
               <span>{user?.name || "User"}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  logout();
-                  navigate("/login");
-                }}
-                className="text-gray-300 hover:text-white"
-              >
-                <LogOut className="w-5 h-5" />
-              </Button>
             </div>
+            <SettingsMenu
+              onPublishApp={() => alert("Publish App feature coming soon!")}
+              onPublishWebsite={() => alert("Publish Website feature coming soon!")}
+            />
           </div>
         </div>
       </div>
