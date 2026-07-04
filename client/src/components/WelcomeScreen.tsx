@@ -1,18 +1,37 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Confetti from 'react-confetti';
 import { useWindowSize } from '@/hooks/useWindowSize';
+import { Volume2, VolumeX } from 'lucide-react';
 
 interface WelcomeScreenProps {
   userName?: string;
   onComplete?: () => void;
 }
 
+const TUTORIAL_STEPS = [
+  {
+    id: 'welcome',
+    title: '🎉 স্বাগতম Bayojid AI Pro এ!',
+    description: 'আমরা আপনাকে একটি দ্রুত ট্যুর দেখাতে চাই যাতে আপনি সবকিছু বুঝতে পারেন। প্রস্তুত?',
+    tips: ['এই টিউটোরিয়াল যেকোনো সময় বন্ধ করতে পারেন', 'পরে আবার শুরু করতে Settings এ যান'],
+  },
+];
+
 export default function WelcomeScreen({ userName = 'User', onComplete }: WelcomeScreenProps) {
   const [isVisible, setIsVisible] = useState(true);
   const { width, height } = useWindowSize();
   const [showConfetti, setShowConfetti] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
+    // Play celebration sound when component mounts
+    if (audioRef.current && !isMuted) {
+      audioRef.current.play().catch(() => {
+        // Silently fail if audio can't play (e.g., browser autoplay policy)
+      });
+    }
+
     // Auto-hide after 5 seconds
     const timer = setTimeout(() => {
       setIsVisible(false);
@@ -21,14 +40,21 @@ export default function WelcomeScreen({ userName = 'User', onComplete }: Welcome
     }, 5000);
 
     return () => clearTimeout(timer);
-  }, [onComplete]);
+  }, [onComplete, isMuted]);
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted;
+    }
+  };
 
   if (!isVisible) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       {/* Confetti Animation */}
       {showConfetti && (
         <Confetti
@@ -98,6 +124,19 @@ export default function WelcomeScreen({ userName = 'User', onComplete }: Welcome
         </p>
       </div>
 
+      {/* Sound Toggle Button */}
+      <button
+        onClick={toggleMute}
+        className="absolute top-6 left-6 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors backdrop-blur-sm border border-white/20"
+        title={isMuted ? 'Unmute' : 'Mute'}
+      >
+        {isMuted ? (
+          <VolumeX className="w-6 h-6 text-white" />
+        ) : (
+          <Volume2 className="w-6 h-6 text-white" />
+        )}
+      </button>
+
       {/* Close Button */}
       <button
         onClick={() => {
@@ -111,6 +150,14 @@ export default function WelcomeScreen({ userName = 'User', onComplete }: Welcome
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
+
+      {/* Hidden Audio Element */}
+      <audio
+        ref={audioRef}
+        src="/celebration.wav"
+        muted={isMuted}
+        preload="auto"
+      />
     </div>
   );
 }
